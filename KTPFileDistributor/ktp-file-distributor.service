@@ -1,0 +1,26 @@
+[Unit]
+Description=KTP File Distributor Service
+After=network.target
+
+[Service]
+Type=notify
+User=dod
+Group=dod
+WorkingDirectory=/opt/ktp-file-distributor
+ExecStart=/opt/ktp-file-distributor/KTPFileDistributor
+Restart=always
+RestartSec=10
+SyslogIdentifier=ktp-file-distributor
+Environment=DOTNET_ROOT=/usr/share/dotnet
+Environment=ASPNETCORE_ENVIRONMENT=Production
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/opt/ktp-file-distributor/logs
+ReadWritePaths=/home/dod/distribute
+
+[Install]
+WantedBy=multi-user.target
