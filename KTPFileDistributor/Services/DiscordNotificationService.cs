@@ -137,29 +137,48 @@ public class DiscordNotificationService
 
     private async Task SendMessageAsync(string? content, object[]? embeds, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(_settings.RelayUrl) || string.IsNullOrEmpty(_settings.ChannelId))
+        if (string.IsNullOrEmpty(_settings.RelayUrl))
         {
-            _logger.LogWarning("Discord relay not configured");
+            _logger.LogWarning("Discord relay URL not configured");
             return;
         }
 
-        var payload = new
+        var channelIds = _settings.GetAllChannelIds().ToList();
+        if (channelIds.Count == 0)
         {
-            channelId = _settings.ChannelId,
-            content = content ?? "",
-            embeds
-        };
+            _logger.LogWarning("No Discord channel IDs configured");
+            return;
+        }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, _settings.RelayUrl);
-        request.Headers.Add("X-Relay-Auth", _settings.AuthSecret);
-        request.Content = JsonContent.Create(payload);
-
-        var response = await _httpClient.SendAsync(request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        // Send to all configured channels
+        foreach (var channelId in channelIds)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogWarning("Discord relay returned {StatusCode}: {Body}", response.StatusCode, body);
+            try
+            {
+                var payload = new
+                {
+                    channelId,
+                    content = content ?? "",
+                    embeds
+                };
+
+                using var request = new HttpRequestMessage(HttpMethod.Post, _settings.RelayUrl);
+                request.Headers.Add("X-Relay-Auth", _settings.AuthSecret);
+                request.Content = JsonContent.Create(payload);
+
+                var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning("Discord relay returned {StatusCode} for channel {ChannelId}: {Body}",
+                        response.StatusCode, channelId, body);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send to Discord channel {ChannelId}", channelId);
+            }
         }
     }
 

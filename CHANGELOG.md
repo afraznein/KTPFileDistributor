@@ -2,6 +2,19 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.1.0] - 2026-01-10
+
+### Added
+- Multi-channel Discord support via `AdditionalChannelIds` config option
+- `GetAllChannelIds()` helper method for iterating all configured channels
+- Error handling per-channel (one failure doesn't block others)
+
+### Changed
+- Discord notifications now sent to all configured channels (primary + additional)
+- Improved logging to show which channel failed on errors
+
+---
+
 ## [1.0.0] - 2025-12-18
 
 ### Added

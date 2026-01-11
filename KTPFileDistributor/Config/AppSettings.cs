@@ -63,9 +63,14 @@ public class DiscordSettings
     public string AuthSecret { get; set; } = string.Empty;
 
     /// <summary>
-    /// Channel ID to post notifications to
+    /// Primary channel ID to post notifications to
     /// </summary>
     public string ChannelId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Additional channel IDs to also post notifications to (for multi-server support)
+    /// </summary>
+    public List<string> AdditionalChannelIds { get; set; } = new();
 
     /// <summary>
     /// Whether Discord notifications are enabled
@@ -81,4 +86,16 @@ public class DiscordSettings
     /// Whether to send notifications for failed distributions
     /// </summary>
     public bool NotifyOnFailure { get; set; } = true;
+
+    /// <summary>
+    /// Get all channel IDs (primary + additional)
+    /// </summary>
+    public IEnumerable<string> GetAllChannelIds()
+    {
+        if (!string.IsNullOrEmpty(ChannelId))
+            yield return ChannelId;
+
+        foreach (var id in AdditionalChannelIds.Where(id => !string.IsNullOrEmpty(id)))
+            yield return id;
+    }
 }

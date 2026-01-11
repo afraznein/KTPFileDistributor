@@ -74,6 +74,7 @@ sudo ./install.sh
     "RelayUrl": "http://your-relay:3000/reply",
     "AuthSecret": "your-secret",
     "ChannelId": "your-channel-id",
+    "AdditionalChannelIds": ["second-channel-id"],
     "NotifyOnSuccess": true,
     "NotifyOnFailure": true
   }
