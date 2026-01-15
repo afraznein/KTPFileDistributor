@@ -1,6 +1,6 @@
 # KTP File Distributor
 
-A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
+**Version 1.1.0** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
 
 ## Features
 
@@ -144,6 +144,23 @@ Files in the watch directory are uploaded to the same relative path on each serv
 Watch: /home/dod/distribute/addons/amxmodx/plugins/myplugin.amxx
 Remote: /home/dod/server/dod/addons/amxmodx/plugins/myplugin.amxx
 ```
+
+## Version History
+
+### v1.1.0 (2026-01-10)
+- ✅ **ADDED: Multi-channel Discord support** - `AdditionalChannelIds` config option
+- ✅ **ADDED: `GetAllChannelIds()` helper** - Iterate all configured channels
+- 🔧 **CHANGED: Discord notifications** - Now sent to all configured channels
+- 🔧 **IMPROVED: Error handling** - Per-channel errors don't block others
+
+### v1.0.0 (2025-12-18)
+- 🎉 **Initial release**
+- ✅ FileSystemWatcher-based directory monitoring
+- ✅ SFTP distribution to multiple servers in parallel
+- ✅ Password and SSH private key authentication
+- ✅ Debounced file change batching
+- ✅ Discord notifications via webhook relay
+- ✅ systemd service integration
 
 ## License
 
