@@ -102,11 +102,28 @@ Create a `servers.json` file with your target servers:
     "port": 22,
     "username": "dod",
     "privateKeyPath": "/home/dod/.ssh/id_rsa",
+    "privateKeyPassphrase": "optional-key-passphrase",
     "remoteBasePath": "/srv/dod",
     "enabled": true
   }
 ]
 ```
+
+**Server Configuration Options:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Display name for logging and Discord notifications |
+| `host` | Yes | SFTP hostname or IP address |
+| `port` | No | SFTP port (default: 22) |
+| `username` | Yes | SFTP username |
+| `password` | No* | Password for password authentication |
+| `privateKeyPath` | No* | Path to SSH private key for key authentication |
+| `privateKeyPassphrase` | No | Passphrase for encrypted private keys |
+| `remoteBasePath` | Yes | Base path on server where files are uploaded |
+| `enabled` | No | Whether to include this server (default: true) |
+
+*Either `password` or `privateKeyPath` must be provided.
 
 ## Usage
 
@@ -133,8 +150,17 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 
 1. Place files in the watch directory (default: `/home/dod/distribute`)
 2. The service detects changes and waits for the debounce period (default: 5 seconds)
-3. After the quiet period, all changed files are uploaded to all enabled servers in parallel
-4. A Discord notification is sent with the distribution results
+3. Multiple changes to the same file are deduplicated (only the latest version is uploaded)
+4. After the quiet period, all changed files are uploaded to all enabled servers in parallel
+5. A Discord notification is sent with the distribution results
+
+### Automatic Features
+
+- **Watch directory creation**: If the watch directory doesn't exist, it's automatically created
+- **FileSystemWatcher recovery**: If the file watcher encounters an error, it automatically restarts
+- **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers
+- **Remote directory creation**: Remote directories are automatically created as needed during upload
+- **Startup/shutdown notifications**: Discord notifications are sent when the service starts and stops
 
 ### Directory Structure
 
