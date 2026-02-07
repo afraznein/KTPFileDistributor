@@ -27,5 +27,6 @@ logs/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Claude Code context (contains production credentials)
 CLAUDE.md
-SYNC_NEW_SERVER.md
