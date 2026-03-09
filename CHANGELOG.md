@@ -2,6 +2,13 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.1.1] - 2026-03-03
+
+### Changed
+- Shutdown Discord notification now uses embed format (orange) matching the startup embed style, instead of plain text
+
+---
+
 ## [1.1.0] - 2026-01-10
 
 ### Added

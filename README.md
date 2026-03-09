@@ -1,6 +1,6 @@
 # KTP File Distributor
 
-**Version 1.1.0** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
+**Version 1.1.1** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
 
 ## Features
 

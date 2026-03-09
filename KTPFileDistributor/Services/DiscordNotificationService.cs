@@ -92,7 +92,14 @@ public class DiscordNotificationService
 
         try
         {
-            await SendMessageAsync("KTP File Distributor shutting down", null, cancellationToken);
+            var embed = new
+            {
+                title = "KTP File Distributor Shutting Down",
+                color = 15105570, // Orange
+                timestamp = DateTime.UtcNow.ToString("O")
+            };
+
+            await SendMessageAsync(null, new[] { embed }, cancellationToken);
         }
         catch (Exception ex)
         {
