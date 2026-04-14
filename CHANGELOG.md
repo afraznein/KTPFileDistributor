@@ -2,6 +2,15 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.1.2] - 2026-04-02
+
+### Fixed
+- **Async void crash risk in ChangeDebouncer** — `OnTimerElapsed` was `async void`, meaning unhandled exceptions would crash the entire service. Refactored to `async Task` with explicit fire-and-forget wrapper and try/catch.
+- **Path traversal in remote upload** — `BuildRemotePath` did not validate relative paths. A path containing `../` could escape the server's base directory. Now rejects traversal patterns.
+- **Generic exception catch in `EnsureRemoteDirectoryExists`** — Bare `catch` swallowed all exceptions including fatal ones. Now catches only `SshException` and `IOException`.
+
+---
+
 ## [1.1.1] - 2026-03-03
 
 ### Changed

@@ -62,28 +62,35 @@ public class ChangeDebouncer : IDisposable
         }
     }
 
-    private async void OnTimerElapsed(object? state)
+    // Timer callback must be sync — fire-and-forget the async work with explicit exception handling
+    // to prevent unobserved exceptions from crashing the process
+    private void OnTimerElapsed(object? state)
     {
-        if (_pendingChanges.IsEmpty)
-            return;
+        _ = OnTimerElapsedAsync();
+    }
 
-        // Snapshot and clear pending changes
-        var changes = new List<FileChangeEvent>();
-        foreach (var key in _pendingChanges.Keys.ToList())
-        {
-            if (_pendingChanges.TryRemove(key, out var change))
-            {
-                changes.Add(change);
-            }
-        }
-
-        if (changes.Count == 0)
-            return;
-
-        _logger.LogInformation("Debounce complete. Processing {Count} file change(s)", changes.Count);
-
+    private async Task OnTimerElapsedAsync()
+    {
         try
         {
+            if (_pendingChanges.IsEmpty)
+                return;
+
+            // Snapshot and clear pending changes
+            var changes = new List<FileChangeEvent>();
+            foreach (var key in _pendingChanges.Keys.ToList())
+            {
+                if (_pendingChanges.TryRemove(key, out var change))
+                {
+                    changes.Add(change);
+                }
+            }
+
+            if (changes.Count == 0)
+                return;
+
+            _logger.LogInformation("Debounce complete. Processing {Count} file change(s)", changes.Count);
+
             if (OnBatchReady != null)
             {
                 await OnBatchReady.Invoke(changes);
@@ -91,7 +98,7 @@ public class ChangeDebouncer : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing batch of {Count} changes", changes.Count);
+            _logger.LogError(ex, "Error processing debounced batch");
         }
     }
 

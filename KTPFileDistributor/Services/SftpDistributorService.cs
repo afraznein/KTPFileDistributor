@@ -213,6 +213,11 @@ public class SftpDistributorService
     {
         // Normalize to forward slashes for Linux
         var normalized = relativePath.Replace('\\', '/');
+
+        // Prevent path traversal — reject relative paths that escape the base directory
+        if (normalized.Contains("../") || normalized.Contains("/..") || normalized == "..")
+            throw new ArgumentException($"Relative path contains traversal: {relativePath}");
+
         return $"{basePath.TrimEnd('/')}/{normalized.TrimStart('/')}";
     }
 
@@ -232,9 +237,13 @@ public class SftpDistributorService
                     _logger.LogDebug("Created remote directory: {Path}", currentPath);
                 }
             }
-            catch
+            catch (Renci.SshNet.Common.SshException)
             {
-                // Directory might already exist, continue
+                // Directory may already exist or permission issue — continue to next segment
+            }
+            catch (IOException)
+            {
+                // Network I/O issue — continue, upload will fail with a clearer error
             }
         }
     }
