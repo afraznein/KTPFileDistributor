@@ -78,8 +78,25 @@ public class SftpDistributorService
         await _semaphore.WaitAsync(cancellationToken);
         try
         {
-            using var client = CreateSftpClient(server);
+            SftpClient client;
+            try
+            {
+                client = CreateSftpClient(server);
+            }
+            catch (Exception ex)
+            {
+                // A missing/malformed privateKeyPath throws here while building the
+                // PrivateKeyFile — before the retry loop's try/catch. Keep it a
+                // per-server failure; unguarded it faulted Task.WhenAll and
+                // discarded the whole batch's ServerResults, including servers
+                // that had already finished successfully.
+                result.ErrorMessage = ex.Message;
+                _logger.LogError(ex, "Failed to create SFTP client for {Server}", server.Name);
+                return result;
+            }
 
+            using (client)
+            {
             for (int attempt = 1; attempt <= _settings.UploadRetryCount; attempt++)
             {
                 try
@@ -130,6 +147,7 @@ public class SftpDistributorService
                     if (client.IsConnected)
                         client.Disconnect();
                 }
+            }
             }
         }
         finally

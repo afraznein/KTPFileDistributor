@@ -137,22 +137,43 @@ public class FileWatcherWorker : BackgroundService
         if (Directory.Exists(e.FullPath))
             return;
 
-        // Check if new name matches any of our patterns
-        if (!MatchesPattern(e.Name ?? ""))
+        var newMatches = MatchesPattern(e.Name ?? "");
+        var oldMatches = MatchesPattern(e.OldName ?? "");
+
+        if (!newMatches && !oldMatches)
             return;
 
-        var change = new FileChangeEvent
-        {
-            FullPath = e.FullPath,
-            RelativePath = GetRelativePath(e.FullPath),
-            ChangeType = WatcherChangeTypes.Renamed,
-            DetectedAt = DateTime.UtcNow,
-            FileSize = GetFileSize(e.FullPath)
-        };
-
         _logger.LogInformation("File Renamed: {OldPath} -> {NewPath}",
-            GetRelativePath(e.OldFullPath), change.RelativePath);
-        _debouncer.AddChange(change);
+            GetRelativePath(e.OldFullPath), GetRelativePath(e.FullPath));
+
+        // Distribute the file under its new name.
+        if (newMatches)
+        {
+            _debouncer.AddChange(new FileChangeEvent
+            {
+                FullPath = e.FullPath,
+                RelativePath = GetRelativePath(e.FullPath),
+                ChangeType = WatcherChangeTypes.Renamed,
+                DetectedAt = DateTime.UtcNow,
+                FileSize = GetFileSize(e.FullPath)
+            });
+        }
+
+        // Remove the old remote copy. Without this the rename leaves the old
+        // filename on every fleet server and FastDL forever — the debouncer
+        // keys on RelativePath, so the old name never picks up a delete on its
+        // own. Also covers a rename to a non-watched name (only the delete fires).
+        if (oldMatches)
+        {
+            _debouncer.AddChange(new FileChangeEvent
+            {
+                FullPath = e.OldFullPath,
+                RelativePath = GetRelativePath(e.OldFullPath),
+                ChangeType = WatcherChangeTypes.Deleted,
+                DetectedAt = DateTime.UtcNow,
+                FileSize = 0
+            });
+        }
     }
 
     private void OnWatcherError(object sender, ErrorEventArgs e)
