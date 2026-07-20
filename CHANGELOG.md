@@ -2,11 +2,42 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [Unreleased]
+
+### Documentation
+- **FastDL `dod/` path rule documented in the README.** The rule existed only in the
+  agent-facing skill and `CLAUDE.md`; it had never reached the operator-facing doc, even
+  though this service is the thing that writes to FastDL and one wrong `remoteBasePath`
+  reproduces the 404-on-disk bug silently for every asset forever. Added the canonical
+  `/var/www/fastdl/dod/<game-relative-path>` form, the `curl -sI` verification, and the
+  fastdl-root sanity check.
+- README `WatchPatterns` example now matches the shipped `appsettings.json` (was missing
+  `*.res`, `*.mdl`, `*.wav` — copying it verbatim silently stopped distributing models
+  and sounds, exactly the FastDL client-download assets).
+- Documented the 1.1.3 rename behavior and the 1.1.2 path-traversal rejection, both of
+  which shipped with a README version bump only.
+- Noted that delete failures are logged as warnings, are not retried, and do not fail the
+  server's result — uploads do not behave this way.
+- Stated the `servers.json` location and that a missing file auto-generates an example and
+  starts the service with zero targets.
+- `SYNC_NEW_SERVER.md`: replaced production IPs with the placeholder tokens this repo's
+  `CLAUDE.md` already mandates (the file predates that convention), and added the two
+  missing fleet hosts — including Chicago's 4-instance port range, which the doc's
+  `27015 … 27019` loop idiom does not cover.
+- Corrected the watch-directory "default" (it's the configured value, not the compiled-in
+  one), switched the directory-structure example from `amxmodx` to this stack's `ktpamx`,
+  and removed an orphaned `.gitignore` comment asserting that a tracked public file
+  contains production credentials.
+
+---
+
 ## [1.1.3] - 2026-07-18
 
 ### Fixed
 - **Renames never removed the old remote copy (FD-01).** `OnFileRenamed` only turned the *new* path into a `FileChangeEvent`; the old filename was logged and dropped, and `ChangeDebouncer` keys purely on `RelativePath`, so the old name never got a delete on its own. Renaming a watched file left the old copy on every fleet server and FastDL indefinitely, with no cleanup path — anything still referencing the old name (a stale `server.cfg` exec line, a cached FastDL link) kept serving it. `OnFileRenamed` now emits a `Deleted` event for the old path alongside the new-name event. It also handles a rename to a non-watched name (e.g. `.amxx` → `.amxx.disabled`): the new name no longer matches a pattern, so only the delete of the old copy fires.
 - **One bad server blanked out the whole batch's result (FD-02).** `CreateSftpClient(server)` ran inside `UploadToServerAsync`'s outer `try` — which has only a `finally`, no `catch` — before the retry loop's try/catch. A missing/malformed `privateKeyPath` throws while constructing `PrivateKeyFile`, so that fault propagated past all per-server isolation, faulted `Task.WhenAll` in `DistributeAsync`, and skipped `result.ServerResults = …` entirely: the batch produced no per-server results and no Discord notification, even for servers that had already finished successfully, and it repeated every batch. Client construction is now wrapped in its own try/catch that records a normal failed `ServerUploadResult` and returns, so one bad server no longer discards the batch.
+
+---
 
 ## [1.1.2] - 2026-04-02
 

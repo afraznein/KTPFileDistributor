@@ -61,7 +61,7 @@ sudo ./install.sh
 {
   "AppSettings": {
     "WatchDirectory": "/home/dod/distribute",
-    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad"],
+    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.wav"],
     "IncludeSubdirectories": true,
     "DebounceDelayMs": 5000,
     "MaxConcurrentUploads": 5,
@@ -81,9 +81,16 @@ sudo ./install.sh
 }
 ```
 
+`WatchPatterns` is the only gate — a file whose extension isn't listed is dropped before
+it reaches the debouncer. An empty list, or the literal `"*.*"` (the compiled-in default),
+matches everything.
+
 #### servers.json
 
-Create a `servers.json` file with your target servers:
+Create a `servers.json` file in the application directory — `/opt/ktp-file-distributor/servers.json`
+for the standard install, otherwise alongside the binary. If it's missing the service does **not**
+fail: it logs a warning, writes an example file to that path, and starts with **no** distribution
+targets, which otherwise reads as a healthy startup.
 
 ```json
 [
@@ -125,6 +132,36 @@ Create a `servers.json` file with your target servers:
 
 *Either `password` or `privateKeyPath` must be provided.
 
+#### FastDL target — the `dod/` path rule
+
+**The FastDL entry's `remoteBasePath` must end in `/dod`** (i.e. `/var/www/fastdl/dod`).
+The game engine appends `dod/` to every asset request it makes, so a `remoteBasePath`
+of `/var/www/fastdl` puts files on disk that **every client 404s on** — and the upload
+genuinely succeeded, so the logs and the Discord embed both report green SUCCESS.
+Nothing distinguishes this from a working deploy. This has bitten twice in production
+(`xrain2.spr` and `flare1.spr`, both 2026-05).
+
+The canonical asset path is `/var/www/fastdl/dod/<game-relative-path>`. So a server
+asset at `serverfiles/dod/sprites/foo.spr` must land at `/var/www/fastdl/dod/sprites/foo.spr`,
+**not** `/var/www/fastdl/sprites/foo.spr`.
+
+Verify any newly-distributed asset (expect `200`):
+
+```bash
+curl -sI http://<DATA_SERVER_IP>/dod/<game-relative-path>
+```
+
+Sanity check the FastDL root — it should contain only `dod/`, `demos/` (the HLTV portal
+alias), and `cstrike/` if applicable. Anything else at the top level is a misdeploy:
+
+```bash
+find /var/www/fastdl -maxdepth 1 -type d
+```
+
+**Path traversal:** relative paths that escape the watch directory (containing `../`)
+are rejected outright and fail that server's batch with a `Relative path contains
+traversal:` message.
+
 ## Usage
 
 ### Managing the Service
@@ -148,7 +185,7 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 
 ### How It Works
 
-1. Place files in the watch directory (default: `/home/dod/distribute`)
+1. Place files in the watch directory (configured value: `/home/dod/distribute`; the compiled-in default, used only if `appsettings.json` omits the key, is `/srv/ktp/sync`)
 2. The service detects changes and waits for the debounce period (default: 5 seconds)
 3. Multiple changes to the same file are deduplicated (only the latest version is uploaded)
 4. After the quiet period, all changed files are uploaded to all enabled servers in parallel
@@ -158,7 +195,8 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 
 - **Watch directory creation**: If the watch directory doesn't exist, it's automatically created
 - **FileSystemWatcher recovery**: If the file watcher encounters an error, it automatically restarts
-- **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers
+- **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers. Delete failures are logged as warnings only — they are **not** retried and do **not** mark the server as failed, so confirm removals in the log rather than from the Discord embed (uploads do not behave this way; they propagate into the retry loop).
+- **Rename handling**: Renaming a watched file uploads it under the new name and deletes the old remote copy. Renaming to a non-watched extension deletes the remote copy without re-uploading. Both are destructive remote side effects — a rename in the watch directory removes the old file from every fleet server and FastDL.
 - **Remote directory creation**: Remote directories are automatically created as needed during upload
 - **Startup/shutdown notifications**: Discord notifications are sent when the service starts and stops
 
@@ -167,8 +205,8 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 Files in the watch directory are uploaded to the same relative path on each server. For example:
 
 ```
-Watch: /home/dod/distribute/addons/amxmodx/plugins/myplugin.amxx
-Remote: /home/dod/server/dod/addons/amxmodx/plugins/myplugin.amxx
+Watch: /home/dod/distribute/addons/ktpamx/plugins/myplugin.amxx
+Remote: /home/dod/server/dod/addons/ktpamx/plugins/myplugin.amxx
 ```
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.

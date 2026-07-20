@@ -43,9 +43,16 @@ rsync -avz --progress \
 
 | Server | IP | Ports |
 |--------|----|-------|
-| Atlanta Baremetal | 74.91.121.9 | 27015-27019 |
-| Dallas | 74.91.126.55 | 27015-27019 |
-| Denver | 66.163.114.109 | 27015-27019 |
+| Atlanta Baremetal | <ATL_BM_GAME_IP> | 27015-27019 |
+| Dallas | <DAL_GAME_IP> | 27015-27019 |
+| Denver | <DEN_GAME_IP> | 27015-27019 |
+| New York | <NYC_GAME_IP> | 27015-27019 |
+| Chicago | <CHI_GAME_IP> | 27015-27018 |
+
+Real addresses resolve in the private root context, per the placeholder convention
+in `CLAUDE.md`. **Chicago runs four instances, not five** — the `for port in 27015
+… 27019` idiom in the examples below must be trimmed to `27015 … 27018` there.
+Fleet total is 24 instances across 5 hosts.
 
 **Example — sync all 5 instances on Atlanta:**
 ```bash
@@ -53,7 +60,7 @@ for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
     -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
     /var/www/fastdl/dod/ \
-    dodserver@74.91.121.9:/home/dodserver/dod-$port/serverfiles/dod/
+    dodserver@<ATL_BM_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
 ```
 
@@ -63,7 +70,7 @@ for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
     -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
     /var/www/fastdl/dod/ \
-    dodserver@74.91.126.55:/home/dodserver/dod-$port/serverfiles/dod/
+    dodserver@<DAL_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
 ```
 
@@ -73,7 +80,7 @@ for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
     -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
     /var/www/fastdl/dod/ \
-    dodserver@66.163.114.109:/home/dodserver/dod-$port/serverfiles/dod/
+    dodserver@<DEN_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
 ```
 
@@ -87,7 +94,7 @@ Add `-n` flag to preview without transferring:
 rsync -avzn --progress \
   -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
   /var/www/fastdl/dod/ \
-  dodserver@74.91.121.9:/home/dodserver/dod-27015/serverfiles/dod/
+  dodserver@<ATL_BM_GAME_IP>:/home/dodserver/dod-27015/serverfiles/dod/
 ```
 
 ---
