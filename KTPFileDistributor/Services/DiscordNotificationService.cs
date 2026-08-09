@@ -107,6 +107,15 @@ public class DiscordNotificationService
         }
     }
 
+    // Full detail stays in journalctl; the embed only needs enough to tell
+    // servers apart. Paths are the long part -- 25 targets of full relative
+    // paths blows the 1024-char field on the one failure that hits every host.
+    private static string Summarize(string? message)
+    {
+        if (string.IsNullOrEmpty(message)) return "unknown error";
+        return message.Length <= 90 ? message : message[..87] + "...";
+    }
+
     private object BuildResultEmbed(DistributionResult result)
     {
         var status = result.AllSuccessful ? "SUCCESS" : "PARTIAL FAILURE";
@@ -121,10 +130,19 @@ public class DiscordNotificationService
         var serverStatus = string.Join("\n", result.ServerResults.Select(s =>
             s.Success
                 ? $"- {s.ServerName} ({s.Duration.TotalSeconds:F1}s)"
-                : $"- {s.ServerName} FAILED: {s.ErrorMessage}"));
+                : $"- {s.ServerName} FAILED: {Summarize(s.ErrorMessage)}"));
 
+        // Truncation has to say what it dropped. One bad file mode fails identically
+        // on all 25 targets, which is exactly when the operator needs to see how wide
+        // it went -- a bare "..." reads as a short list.
         if (serverStatus.Length > 1000)
-            serverStatus = serverStatus[..997] + "...";
+        {
+            var cut = serverStatus[..960].LastIndexOf('\n');
+            if (cut < 0) cut = 960;
+            var shown = serverStatus[..cut].Count(c => c == '\n') + 1;
+            serverStatus = serverStatus[..cut]
+                + $"\n... (+{result.ServerResults.Count - shown} more server(s))";
+        }
 
         return new
         {

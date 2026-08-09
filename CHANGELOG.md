@@ -20,8 +20,19 @@ All notable changes to KTP File Distributor will be documented in this file.
   re-queue — so a single undeletable file would block unrelated pushes to that
   host indefinitely. The pass now applies what it can, retries while attempts
   remain, and fails with the offending paths named rather than just counted. The
-  per-file catch is guarded on `client.IsConnected` so a dropped connection still
-  reaches the retry loop instead of becoming N per-file failures.
+  per-file catch is guarded on `client.IsConnected` for **latency, not
+  correctness** — the batch replays either way, since `failed.Count > 0` reaches
+  the same disconnect/delay/replay the outer catch would use. What the filter
+  avoids is grinding the batch tail against a half-open socket at up to
+  `ConnectionTimeoutSeconds` per file while holding one of five semaphore slots.
+- Shutdown is no longer logged as an upload failure. A cancellation raised in the
+  file loop was caught by the attempt-level handler ("attempt N failed,
+  retrying") and, on the final attempt, swallowed into a normal failed result.
+- The Discord embed summarises a per-server error instead of pasting it whole,
+  and truncation now reports how many servers it dropped. Naming failed paths
+  made each line 3-5x longer, and `Server Details` is capped at Discord's 1024;
+  with 25 targets a failure that hits every host — one bad file mode is enough —
+  showed ~5 servers behind a bare `...` that read as a short list.
 
 ### Removed
 - `ChangeDebouncer.PendingCount` — declared, never read. `_pendingChanges.Count`

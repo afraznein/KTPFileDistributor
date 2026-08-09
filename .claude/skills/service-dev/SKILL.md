@@ -16,8 +16,9 @@ files on 24 live instances, not just one.
   operator permission in the current conversation, even if a change here is
   meant to push new files to it.
 - This service itself is not a game server, but don't stop/start it casually
-  either — a stop mid-batch can drop an in-flight retry silently (see the
-  delete/upload asymmetry below); prefer letting a batch finish first.
+  either — a stop mid-batch can drop an in-flight retry silently
+  (`ChangeDebouncer` clears `_pendingChanges` before invoking `OnBatchReady`,
+  so nothing re-queues it); prefer letting a batch finish first.
 - Deploys to the AMX/plugin fleet still go through the standard `.new`
   staging + 03:00 ET nightly swap — this service is one of the things that
   *pushes* those `.new` files, not something that consumes them itself.
@@ -31,22 +32,18 @@ files on 24 live instances, not just one.
   a tripwire fact when trimming.
 
 ## Known gaps — don't reintroduce these, don't copy the pattern elsewhere
-- **Renames leak remote copies.** `OnFileRenamed` in `FileWatcherWorker.cs`
-  only turns the *new* path into a `FileChangeEvent`; the old path is logged
-  and then dropped. `ChangeDebouncer` keys purely on `RelativePath`, so the
-  old filename never gets an entry either. Net effect: renaming a file in the
-  watch directory leaves the old copy sitting on every fleet server and
-  FastDL forever — there is no cleanup path today. If you add rename cleanup,
-  it needs a *second* `FileChangeEvent` for `GetRelativePath(e.OldFullPath)`
-  with `ChangeType = Deleted`, alongside the new-name event.
-- **One bad server can blank out a whole batch's result.** In
-  `UploadToServerAsync`, `CreateSftpClient(server)` runs before the retry
-  loop's try/catch, so a bad or missing `privateKeyPath` throws past all
-  per-server isolation. That fault propagates through `Task.WhenAll` in
-  `DistributeAsync` and skips `result.ServerResults = ...` entirely — the
-  whole batch loses its Discord notification and per-server results, even for
-  servers that already finished successfully. Keep any future per-server
-  construction inside that server's own try/catch.
+- ✅ **Renames leak remote copies — FIXED in 1.1.3** (FD-01). `OnFileRenamed`
+  now emits a second `FileChangeEvent` for `GetRelativePath(e.OldFullPath)`
+  with `ChangeType = Deleted` alongside the new-name event
+  (`FileWatcherWorker.cs`). Kept here because the *pattern* is the trap:
+  `ChangeDebouncer` keys purely on `RelativePath`, so any event that implies a
+  second path must emit a second entry or that path is silently never applied.
+- ✅ **One bad server blanking a whole batch's result — FIXED in 1.1.3**
+  (FD-02). `CreateSftpClient(server)` is now inside the per-server try/catch
+  in `UploadToServerAsync`, so a bad `privateKeyPath` can no longer propagate
+  through `Task.WhenAll` in `DistributeAsync` and skip `result.ServerResults`
+  entirely. Keep any future per-server construction inside that server's own
+  try/catch — that is the rule this one broke.
 - **Per-file failures must not abort the batch (fixed 1.1.4).** Both operations
   are wrapped per file: a failure is recorded, the remaining files still get
   applied, and the pass fails at the end with the failed paths named. Before
@@ -55,9 +52,12 @@ files on 24 live instances, not just one.
   which then dropped every file ordered *after* the failure — permanently, since
   `FileWatcherWorker` does not re-queue. One undeletable file would have blocked
   unrelated pushes to that host indefinitely.
-  The per-file catch is guarded by `when (client.IsConnected)` **deliberately**:
-  a dropped connection is not a per-file fault and must reach the retry loop,
-  or one disconnect becomes N per-file failures and the batch never replays.
+  The per-file catch is guarded by `when (client.IsConnected)` for **latency,
+  not correctness** — the batch replays either way (`failed.Count > 0` reaches
+  the same disconnect/delay/replay). What the filter avoids is grinding the
+  batch tail against a half-open socket at up to `ConnectionTimeoutSeconds` per
+  file while holding one of five semaphore slots. Don't "simplify" it away, and
+  don't believe a comment that calls it load-bearing for replay.
 
 ## FastDL path rule (this repo is where it usually bites)
 `servers.json`'s FastDL entry must set `remoteBasePath` to

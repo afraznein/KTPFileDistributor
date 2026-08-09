@@ -126,9 +126,17 @@ public class SftpDistributorService
                             // Record and keep going. A file that can never be applied
                             // -- wrong owner, permission-denied stat -- would otherwise
                             // block every file ordered after it on this host, on every
-                            // retry and every later batch containing it. A dropped
-                            // connection is not per-file, so the `when` lets it out to
-                            // the retry loop instead.
+                            // retry and every later batch containing it.
+                            //
+                            // The IsConnected filter is about LATENCY, not correctness:
+                            // the batch replays either way (failed.Count > 0 reaches the
+                            // same disconnect/delay/continue the outer catch uses). What
+                            // it buys is not grinding the remaining files against a
+                            // half-open socket at ConnectionTimeoutSeconds each, while
+                            // holding one of only five semaphore slots. IsConnected lags
+                            // a real drop, so it misfiles some connection faults as
+                            // per-file ones -- harmless, because those files fail too and
+                            // route to the same replay.
                             failed.Add(file.RelativePath);
                             _logger.LogError(ex, "Failed to apply {File} to {Server}",
                                 file.RelativePath, server.Name);
@@ -166,6 +174,13 @@ public class SftpDistributorService
                         "Failed to apply {Count} file(s) to {Server} after {Attempts} attempts: {Files}",
                         failed.Count, server.Name, _settings.UploadRetryCount, string.Join(", ", failed));
                     break;
+                }
+                // Shutdown is not an upload failure. Without this the token raised at
+                // the top of the file loop is logged as "attempt N failed, retrying"
+                // and, on the final attempt, swallowed into a normal failed result.
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex) when (attempt < _settings.UploadRetryCount)
                 {
