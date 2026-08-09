@@ -42,6 +42,15 @@ All notable changes to KTP File Distributor will be documented in this file.
   safe — re-uploads overwrite, and the `Exists` guard makes the delete idempotent.
   Delete events have been live traffic since the 1.1.3 rename fix, so this was no
   longer a dormant path.
+- Both operations are now wrapped **per file**, so one failure no longer aborts
+  the rest of the batch for that server. Letting the exception propagate (the
+  first shape of this fix) traded a lie for a worse defect: every file ordered
+  after the failure was dropped, on every retry, and `FileWatcherWorker` does not
+  re-queue — so a single undeletable file would block unrelated pushes to that
+  host indefinitely. The pass now applies what it can, retries while attempts
+  remain, and fails with the offending paths named rather than just counted. The
+  per-file catch is guarded on `client.IsConnected` so a dropped connection still
+  reaches the retry loop instead of becoming N per-file failures.
 
 ### Removed
 - `ChangeDebouncer.PendingCount` — declared, never read. `_pendingChanges.Count`

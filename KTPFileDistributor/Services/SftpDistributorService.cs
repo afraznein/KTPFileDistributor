@@ -104,24 +104,67 @@ public class SftpDistributorService
                     client.Connect();
                     _logger.LogDebug("Connected to {Server}", server.Name);
 
+                    var failed = new List<string>();
+
                     foreach (var file in files)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        if (file.ChangeType == WatcherChangeTypes.Deleted)
+                        try
                         {
-                            await DeleteFileAsync(client, server, file);
+                            if (file.ChangeType == WatcherChangeTypes.Deleted)
+                            {
+                                await DeleteFileAsync(client, server, file);
+                            }
+                            else
+                            {
+                                await UploadFileAsync(client, server, file);
+                            }
                         }
-                        else
+                        catch (Exception ex) when (client.IsConnected)
                         {
-                            await UploadFileAsync(client, server, file);
+                            // Record and keep going. A file that can never be applied
+                            // -- wrong owner, permission-denied stat -- would otherwise
+                            // block every file ordered after it on this host, on every
+                            // retry and every later batch containing it. A dropped
+                            // connection is not per-file, so the `when` lets it out to
+                            // the retry loop instead.
+                            failed.Add(file.RelativePath);
+                            _logger.LogError(ex, "Failed to apply {File} to {Server}",
+                                file.RelativePath, server.Name);
                         }
                     }
 
-                    result.Success = true;
-                    _logger.LogDebug(
-                        "Uploaded {Count} file(s) to {Server} in {Duration}ms",
-                        files.Count, server.Name, stopwatch.ElapsedMilliseconds);
+                    if (failed.Count == 0)
+                    {
+                        result.Success = true;
+                        _logger.LogDebug(
+                            "Uploaded {Count} file(s) to {Server} in {Duration}ms",
+                            files.Count, server.Name, stopwatch.ElapsedMilliseconds);
+                        break;
+                    }
+
+                    if (attempt < _settings.UploadRetryCount)
+                    {
+                        _logger.LogWarning(
+                            "{Count} file(s) failed on {Server}, attempt {Attempt}/{Max}; replaying batch",
+                            failed.Count, server.Name, attempt, _settings.UploadRetryCount);
+
+                        if (client.IsConnected)
+                            client.Disconnect();
+
+                        await Task.Delay(_settings.RetryDelayMs, cancellationToken);
+                        continue;
+                    }
+
+                    // Named, not just counted: a per-server count tells the operator
+                    // something broke but not what is now stale on that host.
+                    result.ErrorMessage = failed.Count <= 5
+                        ? $"{failed.Count} file(s) failed: {string.Join(", ", failed)}"
+                        : $"{failed.Count} file(s) failed: {string.Join(", ", failed.GetRange(0, 5))}, ...";
+                    _logger.LogError(
+                        "Failed to apply {Count} file(s) to {Server} after {Attempts} attempts: {Files}",
+                        failed.Count, server.Name, _settings.UploadRetryCount, string.Join(", ", failed));
                     break;
                 }
                 catch (Exception ex) when (attempt < _settings.UploadRetryCount)

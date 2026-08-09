@@ -47,14 +47,17 @@ files on 24 live instances, not just one.
   whole batch loses its Discord notification and per-server results, even for
   servers that already finished successfully. Keep any future per-server
   construction inside that server's own try/catch.
-- **Delete failures lie about success.** `DeleteFileAsync` catches its own
-  exceptions and only logs a warning; it never fails the batch the way
-  `UploadFileAsync` does. A remote permission error on one delete still
-  reports `Success = true` for that server, and the failed delete is never
-  retried. Don't mirror this in new code — let failures propagate like
-  uploads do.
-- `ChangeDebouncer.PendingCount` is unread anywhere in the codebase; it's
-  dead API surface, not a bug — leave it or remove it, don't be alarmed by it.
+- **Per-file failures must not abort the batch (fixed 1.1.4).** Both operations
+  are wrapped per file: a failure is recorded, the remaining files still get
+  applied, and the pass fails at the end with the failed paths named. Before
+  1.1.4 `DeleteFileAsync` swallowed its exceptions and reported `Success = true`
+  for a server still holding a stale file; the first fix let them propagate,
+  which then dropped every file ordered *after* the failure — permanently, since
+  `FileWatcherWorker` does not re-queue. One undeletable file would have blocked
+  unrelated pushes to that host indefinitely.
+  The per-file catch is guarded by `when (client.IsConnected)` **deliberately**:
+  a dropped connection is not a per-file fault and must reach the retry loop,
+  or one disconnect becomes N per-file failures and the batch never replays.
 
 ## FastDL path rule (this repo is where it usually bites)
 `servers.json`'s FastDL entry must set `remoteBasePath` to
