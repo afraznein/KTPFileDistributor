@@ -25,6 +25,12 @@ All notable changes to KTP File Distributor will be documented in this file.
   the same disconnect/delay/replay the outer catch would use. What the filter
   avoids is grinding the batch tail against a half-open socket at up to
   `ConnectionTimeoutSeconds` per file while holding one of five semaphore slots.
+- The README asserted the **pre-1.1.4** delete behaviour, inverted on all three
+  counts — that delete failures are not retried, do not fail the server, and that
+  the operator should trust the log over the Discord embed. The embed is now the
+  correct signal, so that line pointed the operator away from it. This is the
+  residue of removing the CHANGELOG line making the same claim without removing
+  the README text it was documenting.
 - Shutdown is no longer logged as an upload failure. A cancellation raised in the
   file loop was caught by the attempt-level handler ("attempt N failed,
   retrying") and, on the final attempt, swallowed into a normal failed result.
@@ -32,7 +38,14 @@ All notable changes to KTP File Distributor will be documented in this file.
   and truncation now reports how many servers it dropped. Naming failed paths
   made each line 3-5x longer, and `Server Details` is capped at Discord's 1024;
   with 25 targets a failure that hits every host — one bad file mode is enough —
-  showed ~5 servers behind a bare `...` that read as a short list.
+  showed ~5 servers behind a bare `...` that read as a short list. The per-server
+  error is also flattened before truncation: the `(+N more)` count is derived from
+  newlines, so one embedded newline made the very number this added go negative.
+- Cancellation now ends the batch quietly rather than as an error with a stack
+  trace. ⚠️ **A stop mid-batch leaves no Discord record of the partial
+  application** — `DistributeAsync` throws before it can populate `ServerResults`,
+  and `ChangeDebouncer` has already cleared the pending set, so nothing re-queues.
+  The log line says so explicitly.
 
 ### Removed
 - `ChangeDebouncer.PendingCount` — declared, never read. `_pendingChanges.Count`

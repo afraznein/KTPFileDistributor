@@ -195,7 +195,7 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 
 - **Watch directory creation**: If the watch directory doesn't exist, it's automatically created
 - **FileSystemWatcher recovery**: If the file watcher encounters an error, it automatically restarts
-- **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers. Delete failures are logged as warnings only — they are **not** retried and do **not** mark the server as failed, so confirm removals in the log rather than from the Discord embed (uploads do not behave this way; they propagate into the retry loop).
+- **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers. Delete failures are handled exactly like upload failures (since 1.1.4): the file is recorded, the rest of the batch still applies, the batch is retried, and on exhaustion the server is marked failed with the offending paths named. The Discord embed is the signal — before 1.1.4 it reported success for a server still holding the file, which is why this line used to say the opposite.
 - **Rename handling**: Renaming a watched file uploads it under the new name and deletes the old remote copy. Renaming to a non-watched extension deletes the remote copy without re-uploading. Both are destructive remote side effects — a rename in the watch directory removes the old file from every fleet server and FastDL.
 - **Remote directory creation**: Remote directories are automatically created as needed during upload
 - **Startup/shutdown notifications**: Discord notifications are sent when the service starts and stops

@@ -113,6 +113,9 @@ public class DiscordNotificationService
     private static string Summarize(string? message)
     {
         if (string.IsNullOrEmpty(message)) return "unknown error";
+        // Flatten first: the truncation below counts newlines to report how many
+        // servers it dropped, so an embedded newline makes that count negative.
+        message = message.ReplaceLineEndings(" ");
         return message.Length <= 90 ? message : message[..87] + "...";
     }
 

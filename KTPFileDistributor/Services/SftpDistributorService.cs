@@ -133,7 +133,7 @@ public class SftpDistributorService
                             // same disconnect/delay/continue the outer catch uses). What
                             // it buys is not grinding the remaining files against a
                             // half-open socket at ConnectionTimeoutSeconds each, while
-                            // holding one of only five semaphore slots. IsConnected lags
+                            // holding a MaxConcurrentUploads slot. IsConnected lags
                             // a real drop, so it misfiles some connection faults as
                             // per-file ones -- harmless, because those files fail too and
                             // route to the same replay.
@@ -178,7 +178,7 @@ public class SftpDistributorService
                 // Shutdown is not an upload failure. Without this the token raised at
                 // the top of the file loop is logged as "attempt N failed, retrying"
                 // and, on the final attempt, swallowed into a normal failed result.
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     throw;
                 }

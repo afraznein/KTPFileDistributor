@@ -216,6 +216,14 @@ public class FileWatcherWorker : BackgroundService
 
             await _discord.NotifyDistributionResultAsync(result, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Shutdown, not a fault. ⚠️ The batch is GONE: ChangeDebouncer cleared
+            // _pendingChanges before invoking this, and nothing re-queues -- so the
+            // partial application across the fleet has no Discord record either
+            // (DistributeAsync throws before it can populate ServerResults).
+            _logger.LogInformation("Distribution cancelled by shutdown; batch dropped, partial application not reported");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during distribution");
