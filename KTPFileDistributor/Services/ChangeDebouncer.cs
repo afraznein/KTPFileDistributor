@@ -102,10 +102,6 @@ public class ChangeDebouncer : IDisposable
         }
     }
 
-    /// <summary>
-    /// Get current pending change count
-    /// </summary>
-    public int PendingCount => _pendingChanges.Count;
 
     public void Dispose()
     {

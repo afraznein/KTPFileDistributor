@@ -31,6 +31,22 @@ All notable changes to KTP File Distributor will be documented in this file.
 
 ---
 
+## [1.1.4] - 2026-08-09
+
+### Fixed
+- A failed delete no longer reports success. `DeleteFileAsync` caught every
+  exception and logged a warning, so the per-server result stayed
+  `Success = true` and the Discord embed said the batch landed while a server was
+  still holding the stale file. Delete failures now propagate into the same retry
+  loop uploads use; a server that cannot delete ends the batch red. Retrying is
+  safe — re-uploads overwrite, and the `Exists` guard makes the delete idempotent.
+  Delete events have been live traffic since the 1.1.3 rename fix, so this was no
+  longer a dormant path.
+
+### Removed
+- `ChangeDebouncer.PendingCount` — declared, never read. `_pendingChanges.Count`
+  is already logged from `AddChange` for the same information.
+
 ## [1.1.3] - 2026-07-18
 
 ### Fixed

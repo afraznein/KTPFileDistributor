@@ -211,17 +211,12 @@ public class SftpDistributorService
     {
         var remotePath = BuildRemotePath(server.RemoteBasePath, file.RelativePath);
 
-        try
+        // Failures propagate into the retry loop like uploads do -- swallowing
+        // them reported Success=true for a server still holding the stale file.
+        if (client.Exists(remotePath))
         {
-            if (client.Exists(remotePath))
-            {
-                client.DeleteFile(remotePath);
-                _logger.LogDebug("Deleted {File} from {Server}", file.RelativePath, server.Name);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to delete {File} from {Server}", file.RelativePath, server.Name);
+            client.DeleteFile(remotePath);
+            _logger.LogDebug("Deleted {File} from {Server}", file.RelativePath, server.Name);
         }
 
         return Task.CompletedTask;
