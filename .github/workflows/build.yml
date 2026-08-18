@@ -43,11 +43,39 @@ jobs:
         run: dotnet restore KTPFileDistributor/KTPFileDistributor.csproj
 
       - name: Build
-        # -warnaserror is affordable because the project is warning-clean today
-        # (verified: 0 warnings, 0 errors). It locks that in: with <Nullable>
-        # enabled, the warnings this would catch are mostly null-safety, which
-        # is exactly the class you do not want to discover on a box that writes
-        # to all 24 instances. Drop the flag if it ever blocks more than it buys.
+        # -warnaserror is affordable because the project's own code is
+        # warning-clean today (verified: 0 warnings, 0 errors). It locks that
+        # in: with <Nullable> enabled the warnings it catches are mostly
+        # null-safety, which is the class you least want on a box that writes
+        # to all 24 instances.
+        #
+        # NuGet audit codes (NU190x) are carved out deliberately. They are
+        # externally controlled and time-dependent: an advisory published
+        # upstream tomorrow would hard-fail every PR in this repo with no code
+        # change, which is the "required check that cannot pass" failure mode.
+        # They still surface as warnings, and the audit step below reports them.
         run: >
           dotnet build KTPFileDistributor/KTPFileDistributor.csproj
           -c Release --no-restore -warnaserror
+          "-p:WarningsNotAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904"
+
+      - name: Dependency audit
+        # Non-blocking on purpose (see above), but written to the job summary so
+        # a vulnerable dependency is visible rather than buried in build logs.
+        if: always()
+        run: |
+          set -uo pipefail
+          OUT="$(dotnet list KTPFileDistributor/KTPFileDistributor.csproj package                  --vulnerable --include-transitive 2>&1 || true)"
+          echo "$OUT"
+          if echo "$OUT" | grep -q "has the following vulnerable packages"; then
+            {
+              echo "### :warning: Vulnerable dependencies"
+              echo
+              echo '```'
+              echo "$OUT" | sed -n '/vulnerable packages/,$p'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::vulnerable NuGet package(s) present - see the job summary"
+          else
+            echo "no vulnerable packages reported" >> "$GITHUB_STEP_SUMMARY"
+          fi
