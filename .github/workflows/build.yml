@@ -1,0 +1,53 @@
+# KTP Tier 1 — compile gate for the file distributor.
+#
+# This service watches /home/dod/distribute on the data server and pushes any
+# created or changed file to all 24 fleet instances within ~15s. It had no CI
+# at all, so a change that does not compile would have been found by deploying
+# it. Built on ubuntu-latest because that is where it actually runs.
+#
+# ⚠️ NOT `paths:`-filtered, deliberately. If this ever becomes a required
+# status check, a filtered workflow is silently skipped on an unrelated PR, the
+# check never reports, and the branch cannot be merged.
+
+name: Tier 1 Build
+
+on:
+  # push only on the protected branch: `pull_request` is what reports on a PR,
+  # so firing on every branch push would run the same job twice.
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: dotnet build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # Pinned to the project's TargetFramework rather than "latest" so the
+          # analyzer set is predictable -- a newer SDK can introduce warnings
+          # the author never saw, which matters because of -warnaserror below.
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore KTPFileDistributor/KTPFileDistributor.csproj
+
+      - name: Build
+        # -warnaserror is affordable because the project is warning-clean today
+        # (verified: 0 warnings, 0 errors). It locks that in: with <Nullable>
+        # enabled, the warnings this would catch are mostly null-safety, which
+        # is exactly the class you do not want to discover on a box that writes
+        # to all 24 instances. Drop the flag if it ever blocks more than it buys.
+        run: >
+          dotnet build KTPFileDistributor/KTPFileDistributor.csproj
+          -c Release --no-restore -warnaserror
