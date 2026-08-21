@@ -59,6 +59,52 @@ files on 24 live instances, not just one.
   file while holding one of five semaphore slots. Don't "simplify" it away, and
   don't believe a comment that calls it load-bearing for replay.
 
+## What a successful distribution does and does not prove
+
+- **Every push is a whole-file overwrite.** There is no merge and no diff, so a
+  file that is missing lines does not fail — it removes those lines from every
+  destination. A config regenerated from a template that has drifted from the
+  live file strips the difference fleet-wide, and the run reports success
+  because the bytes it was given arrived intact.
+- **"Green" means bytes landed, not that the right content is live.** The
+  service does not compare against an expected hash, read the file back, or ask
+  the destination whether it liked what it got — the FastDL path footgun in this
+  README is the standing example of a SUCCESS report while every client 404'd.
+  Anything whose correctness matters needs its own verification after the push.
+- **Distribution is change-driven and never reconciles.** A file sitting in the
+  watch tree that nobody has touched has never been sent, so its presence there
+  is not evidence any server has it. One had sat in the tree for months without
+  ever landing anywhere while the transport was working perfectly the whole time.
+
+## Scope: content and assets, never game-server binaries
+
+Plugins, modules and engine binaries go through the `.new` staging path and the
+03:00 swap, and moving them onto this service would break four things at once,
+each of them across 24 live instances: it overwrites the live `.amxx` in place,
+so an unplanned crash-restart brings up a binary nobody deliberately activated;
+it fires on any change, so there is no one-wave-per-nightly attribution when
+something goes wrong; a success report says bytes landed, not that the intended
+binary is running; and a rename or delete in the watch tree propagates a delete
+to every server. If the motivation is less manual work, script the `.new` path —
+do not retarget this one.
+
+## Anything distributed to the web root is published
+
+The FastDL destination is a public document root, and destinations are per-server
+entries with no per-file exclusions — the watch tree fans out to every enabled
+entry or none. So a file placed in the tree for the game servers is also served
+over HTTP. Keep configs that carry a secret out of the tree entirely; a mitigation
+on the web server is a sweeper, not a gate.
+
+## The service's account is not the tree's owner
+
+It reads the watch tree through its own service account, which does not own those
+files. Tightening permissions on them can therefore stop distribution to the whole
+fleet without stopping the service or producing an error — the unit stays healthy
+and nothing arrives. Grant access through group ownership and verify a real push
+afterwards. Useful counterpart when hardening: changing a *directory's* mode leaves
+file mtimes alone, so the watcher sees nothing and re-pushes nothing.
+
 ## FastDL path rule (this repo is where it usually bites)
 `servers.json`'s FastDL entry must set `remoteBasePath` to
 `/var/www/fastdl/dod` — the game engine always appends `dod/` itself before
