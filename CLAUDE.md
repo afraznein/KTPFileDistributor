@@ -69,7 +69,7 @@ sudo ./install.sh
     "host": "<ATL_BM_GAME_IP>",
     "port": 22,
     "username": "dodserver",
-    "privateKeyPath": "/var/www/fastdl/.ssh/id_rsa",
+    "privateKeyPath": "<DISTRIBUTOR_KEY_PATH>",
     "remoteBasePath": "/home/dodserver/dod-27015/serverfiles/dod",
     "enabled": true
   },
@@ -78,12 +78,18 @@ sudo ./install.sh
     "host": "localhost",
     "port": 22,
     "username": "root",
-    "privateKeyPath": "/var/www/fastdl/.ssh/id_rsa",
+    "privateKeyPath": "<DISTRIBUTOR_KEY_PATH>",
     "remoteBasePath": "/var/www/fastdl/dod",
     "enabled": true
   }
 ]
 ```
+
+> **`<DISTRIBUTOR_KEY_PATH>` is a placeholder** — the real path is whatever the live
+> `servers.json` on the data server says. It is deliberately not written here: this repo is
+> public, and the key must live **outside every web- or FTP-served directory** (docroots,
+> FTP chroots, anything a vhost or `vsftpd` can reach). A deploy key readable through a
+> served path grants the whole fleet to anyone who can fetch it.
 
 ## Service Management
 ```bash
