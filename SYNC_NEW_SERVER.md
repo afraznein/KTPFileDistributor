@@ -9,7 +9,7 @@ Use these rsync commands to do an initial sync from the data server.
 ## Prerequisites
 
 1. SSH key authentication configured (same key used by KTPFileDistributor)
-2. Run commands as `ftpuser` or with access to the private key at `/var/www/fastdl/.ssh/id_rsa`
+2. Run commands as `ftpuser` or with access to the private key at `<DISTRIBUTOR_KEY_PATH>`
 
 ---
 
@@ -20,19 +20,19 @@ Replace `<HOST>` and `<PORT>` with the target server IP and game port:
 ```bash
 # Full dod folder
 rsync -avz --progress \
-  -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+  -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
   /var/www/fastdl/dod/ \
   dodserver@<HOST>:/home/dodserver/dod-<PORT>/serverfiles/dod/
 
 # Plugins only
 rsync -avz --progress \
-  -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+  -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
   /var/www/fastdl/dod/addons/ktpamx/plugins/ \
   dodserver@<HOST>:/home/dodserver/dod-<PORT>/serverfiles/dod/addons/ktpamx/plugins/
 
 # Maps only
 rsync -avz --progress \
-  -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+  -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
   /var/www/fastdl/dod/maps/ \
   dodserver@<HOST>:/home/dodserver/dod-<PORT>/serverfiles/dod/maps/
 ```
@@ -58,7 +58,7 @@ Fleet total is 24 instances across 5 hosts.
 ```bash
 for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
-    -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+    -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
     /var/www/fastdl/dod/ \
     dodserver@<ATL_BM_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
@@ -68,7 +68,7 @@ done
 ```bash
 for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
-    -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+    -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
     /var/www/fastdl/dod/ \
     dodserver@<DAL_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
@@ -78,7 +78,7 @@ done
 ```bash
 for port in 27015 27016 27017 27018 27019; do
   rsync -avz --progress \
-    -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+    -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
     /var/www/fastdl/dod/ \
     dodserver@<DEN_GAME_IP>:/home/dodserver/dod-$port/serverfiles/dod/
 done
@@ -92,7 +92,7 @@ Add `-n` flag to preview without transferring:
 
 ```bash
 rsync -avzn --progress \
-  -e "ssh -i /var/www/fastdl/.ssh/id_rsa" \
+  -e "ssh -i <DISTRIBUTOR_KEY_PATH>" \
   /var/www/fastdl/dod/ \
   dodserver@<ATL_BM_GAME_IP>:/home/dodserver/dod-27015/serverfiles/dod/
 ```
