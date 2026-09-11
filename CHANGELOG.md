@@ -2,6 +2,31 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.2.0] - 2026-09-11
+
+### Added
+- Per-server `includePatterns` and `excludePatterns` in `servers.json`. A path
+  a server does not accept is neither uploaded to it nor deleted from it, and
+  that includes the delete a rename issues for the old name. Both default to
+  empty, which is exactly the old behaviour, so an existing `servers.json`
+  needs no change. When nothing in a batch applies to a server, the service
+  does not connect to it and reports it as succeeded.
+- The patterns use the same rules as `WatchPatterns`, now kept in one shared
+  `PatternMatcher`: `*.ext` matches at any depth, case-insensitively; `*.*`
+  matches everything; any other pattern must equal the whole watch-relative
+  path.
+- The recommended FastDL entry now carries `"excludePatterns": ["*.cfg", "*.ini"]`.
+  The FastDL docroot is public over both HTTP and FTP, and server configs
+  (which can hold `rcon_password`) have no reason to be there. Neither
+  extension is a client download.
+- `KTPFileDistributor.Tests` (xUnit), run by CI on every PR.
+
+### Note
+- Filters apply from the moment they are configured; they do not clean up.
+  Files a server already holds that now match its excludes stay there until
+  someone removes them by hand, because deletions for those paths are no longer
+  sent to that server.
+
 ## [1.1.4] - 2026-08-09
 
 ### Fixed

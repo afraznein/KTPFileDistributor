@@ -230,28 +230,8 @@ public class FileWatcherWorker : BackgroundService
         }
     }
 
-    private bool MatchesPattern(string fileName)
-    {
-        if (_settings.WatchPatterns.Count == 0 || _settings.WatchPatterns.Contains("*.*"))
-            return true;
-
-        foreach (var pattern in _settings.WatchPatterns)
-        {
-            // Simple glob matching
-            if (pattern.StartsWith("*."))
-            {
-                var extension = pattern[1..]; // e.g., ".amxx"
-                if (fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            else if (pattern.Equals(fileName, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    private bool MatchesPattern(string fileName) =>
+        PatternMatcher.MatchesWatchPatterns(fileName, _settings.WatchPatterns);
 
     private string GetRelativePath(string fullPath)
     {

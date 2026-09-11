@@ -1,3 +1,5 @@
+using KTPFileDistributor.Services;
+
 namespace KTPFileDistributor.Models;
 
 /// <summary>
@@ -50,4 +52,23 @@ public class ServerConfig
     /// Whether this server is enabled for distribution
     /// </summary>
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// If set, only paths matching one of these are sent to this server. Empty (the
+    /// default) sends everything. Same pattern rules as WatchPatterns.
+    /// </summary>
+    public List<string> IncludePatterns { get; set; } = new();
+
+    /// <summary>
+    /// Paths matching any of these are never uploaded to, or deleted from, this server.
+    /// Checked after IncludePatterns, so an exclude always wins.
+    /// </summary>
+    public List<string> ExcludePatterns { get; set; } = new();
+
+    /// <summary>
+    /// Whether a watch-relative path is distributed to this server at all.
+    /// </summary>
+    public bool Accepts(string relativePath) =>
+        (IncludePatterns is not { Count: > 0 } || PatternMatcher.MatchesAny(relativePath, IncludePatterns))
+        && !PatternMatcher.MatchesAny(relativePath, ExcludePatterns);
 }

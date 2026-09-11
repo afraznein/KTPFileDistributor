@@ -80,10 +80,15 @@ sudo ./install.sh
     "username": "root",
     "privateKeyPath": "<DISTRIBUTOR_KEY_PATH>",
     "remoteBasePath": "/var/www/fastdl/dod",
+    "excludePatterns": ["*.cfg", "*.ini"],
     "enabled": true
   }
 ]
 ```
+
+> **`excludePatterns` on the FastDL entry keeps server configs off the public docroot**
+> (HTTP and FTP). It also blocks deletes for those paths, so config files that reached
+> FastDL before the filter was added have to be removed by hand.
 
 > **`<DISTRIBUTOR_KEY_PATH>` is a placeholder** — the real path is whatever the live
 > `servers.json` on the data server says. It is deliberately not written here: this repo is

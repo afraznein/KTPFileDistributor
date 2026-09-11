@@ -90,11 +90,14 @@ do not retarget this one.
 
 ## Anything distributed to the web root is published
 
-The FastDL destination is a public document root, and destinations are per-server
-entries with no per-file exclusions — the watch tree fans out to every enabled
-entry or none. So a file placed in the tree for the game servers is also served
-over HTTP. Keep configs that carry a secret out of the tree entirely; a mitigation
-on the web server is a sweeper, not a gate.
+The FastDL destination is a public document root, served over HTTP and FTP. With no
+filter, the watch tree fans out to every enabled entry, so a file placed in the tree
+for the game servers is published too. The gate is the FastDL entry's
+`"excludePatterns": ["*.cfg", "*.ini"]` (since 1.2.0). Before you assume configs are
+kept off, check that the live `servers.json` actually carries it. Any change to
+`PatternMatcher` or `ServerConfig.Accepts` changes what is published, so the filter
+tests must stay green. Keep secrets out of the tree regardless; a mitigation on the
+web server is a sweeper, not a gate.
 
 ## The service's account is not the tree's owner
 
