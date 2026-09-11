@@ -17,5 +17,15 @@
     "privateKeyPassphrase": "",
     "remoteBasePath": "/srv/dod",
     "enabled": true
+  },
+  {
+    "name": "FastDL",
+    "host": "localhost",
+    "port": 22,
+    "username": "dod",
+    "privateKeyPath": "/home/dod/.ssh/id_rsa",
+    "remoteBasePath": "/var/www/fastdl/dod",
+    "excludePatterns": ["*.cfg", "*.ini"],
+    "enabled": true
   }
 ]

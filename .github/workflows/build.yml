@@ -59,6 +59,14 @@ jobs:
           -c Release --no-restore -warnaserror
           "-p:WarningsNotAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904"
 
+      - name: Test
+        # Same warning policy as the build. The per-server filter decides what
+        # reaches the public FastDL docroot, so its tests gate every PR.
+        run: >
+          dotnet test KTPFileDistributor.Tests/KTPFileDistributor.Tests.csproj
+          -c Release -warnaserror
+          "-p:WarningsNotAsErrors=NU1901%3BNU1902%3BNU1903%3BNU1904"
+
       - name: Dependency audit
         # Non-blocking on purpose (see above), but written to the job summary so
         # a vulnerable dependency is visible rather than buried in build logs.

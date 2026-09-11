@@ -1,6 +1,6 @@
 # KTP File Distributor
 
-**Version 1.1.4** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
+**Version 1.2.0** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
 
 ## Features
 
@@ -81,9 +81,10 @@ sudo ./install.sh
 }
 ```
 
-`WatchPatterns` is the only gate — a file whose extension isn't listed is dropped before
+`WatchPatterns` is the global gate: a file whose extension isn't listed is dropped before
 it reaches the debouncer. An empty list, or the literal `"*.*"` (the compiled-in default),
-matches everything.
+matches everything. Each server can then narrow what it receives with `includePatterns`
+and `excludePatterns` in `servers.json` (below).
 
 #### servers.json
 
@@ -129,8 +130,28 @@ targets, which otherwise reads as a healthy startup.
 | `privateKeyPassphrase` | No | Passphrase for encrypted private keys |
 | `remoteBasePath` | Yes | Base path on server where files are uploaded |
 | `enabled` | No | Whether to include this server (default: true) |
+| `includePatterns` | No | Only paths matching one of these are sent to this server (default: empty, meaning everything) |
+| `excludePatterns` | No | Paths matching any of these are never uploaded to, **or deleted from**, this server. An exclude beats an include. (default: empty) |
 
 *Either `password` or `privateKeyPath` must be provided.
+
+**Per-server patterns** follow the same rules as `WatchPatterns`:
+
+- `*.ext` matches that extension at any depth, case-insensitively (`*.cfg` matches `overviews/dodserver.cfg`).
+- `*.*` matches everything.
+- Any other pattern must equal the whole path relative to the watch directory, with `/` separators, e.g. `addons/ktpamx/configs/plugins.ini`.
+- There are no other wildcards. `maps/*` is a literal name and matches nothing.
+
+Filters apply to deletions as well. If you delete an excluded file from the watch tree, the copy on that server stays, because the server was never meant to have one. So when you add an exclude, remove any matching files the server already holds by hand, once.
+
+#### FastDL target — keep configs off it
+
+**Give the FastDL entry `"excludePatterns": ["*.cfg", "*.ini"]`.** The FastDL docroot is
+public: nginx serves it, and it is also the FTP root. Without a filter, every server
+config dropped into the watch tree is copied there, and a `dodserver.cfg` can carry
+`rcon_password`. Clients never download either extension; FastDL serves maps, textures,
+sprites, models, sounds and overviews. The game servers still get these files, because
+the exclude applies only to the entry that carries it.
 
 #### FastDL target — the `dod/` path rule
 
@@ -196,7 +217,7 @@ tail -f /opt/ktp-file-distributor/logs/distributor-*.log
 - **Watch directory creation**: If the watch directory doesn't exist, it's automatically created
 - **FileSystemWatcher recovery**: If the file watcher encounters an error, it automatically restarts
 - **File deletion sync**: When files are deleted in the watch directory, they're also deleted on remote servers. Delete failures are handled exactly like upload failures (since 1.1.4): the file is recorded, the rest of the batch still applies, the batch is retried, and on exhaustion the server is marked failed with the offending paths named. The Discord embed is the signal — before 1.1.4 it reported success for a server still holding the file, which is why this line used to say the opposite.
-- **Rename handling**: Renaming a watched file uploads it under the new name and deletes the old remote copy. Renaming to a non-watched extension deletes the remote copy without re-uploading. Both are destructive remote side effects — a rename in the watch directory removes the old file from every fleet server and FastDL.
+- **Rename handling**: Renaming a watched file uploads it under the new name and deletes the old remote copy. Renaming to a non-watched extension deletes the remote copy without re-uploading. Both are destructive remote side effects — a rename in the watch directory removes the old file from every server whose `includePatterns`/`excludePatterns` accept that path.
 - **Remote directory creation**: Remote directories are automatically created as needed during upload
 - **Startup/shutdown notifications**: Discord notifications are sent when the service starts and stops
 

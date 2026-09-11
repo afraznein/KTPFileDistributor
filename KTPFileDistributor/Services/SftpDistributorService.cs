@@ -67,13 +67,30 @@ public class SftpDistributorService
         return result;
     }
 
+    /// <summary>
+    /// The part of a batch this server takes. Deletions are filtered too: a path a
+    /// server never receives must not be deleted there either.
+    /// </summary>
+    public static IReadOnlyList<FileChangeEvent> FilesForServer(
+        ServerConfig server, IReadOnlyList<FileChangeEvent> files) =>
+        files.Where(f => server.Accepts(f.RelativePath)).ToList();
+
     private async Task<ServerUploadResult> UploadToServerAsync(
         ServerConfig server,
-        IReadOnlyList<FileChangeEvent> files,
+        IReadOnlyList<FileChangeEvent> batch,
         CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new ServerUploadResult { ServerName = server.Name };
+
+        var files = FilesForServer(server, batch);
+        if (files.Count == 0)
+        {
+            // Nothing to deliver, so don't connect: an unreachable host has nothing to fail.
+            result.Success = true;
+            _logger.LogDebug("No file in this batch applies to {Server}; skipped", server.Name);
+            return result;
+        }
 
         await _semaphore.WaitAsync(cancellationToken);
         try
