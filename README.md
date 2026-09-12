@@ -102,13 +102,20 @@ the base one replaces matching indices but leaves the base's extra tail entries 
 deployment only uses a single `appsettings.json`, so it doesn't hit that case today — but don't
 assume "replaces outright" survives adding a second source without checking the resulting list.
 
-⚠️ **Before narrowing `WatchPatterns` on a live deployment, read its current effective pattern
-list from its own startup log first** (`journalctl -u ktp-file-distributor | grep Patterns:`), not
-from this README. This service also distributes the operator-staged `.amxx.new` files used by the
-plugin/module `.new` → 03:00 swap pipeline (see the root infrastructure docs); those end in `.new`,
-not the base extension, so `*.amxx` does not match `SomePlugin.amxx.new`. If `.new` (or any other
-extension actually flowing through the watch tree) isn't in the list you're about to configure, add
-it — narrowing this list can silently stop a live deploy mechanism with no error anywhere.
+**Measured against the fleet's actual distribution history, this list covers 100% of real traffic.**
+Every extension the live service has ever distributed, counted from `distributor-*.log`: `.ini` 9,016 ·
+`.amxx` 60 · `.txt` 14 · `.cfg` 11 — all four already in the list above. The only other things the old
+`"*.*"` catch-all ever picked up are exactly the junk it should never have: a `.bak-rot-*` backup, `sed`'s
+own editor temp files, and a `.staging` file (see the 1.2.1 CHANGELOG entry for counts). `*.amxx.new` —
+the plugin/module `.new` → 03:00 swap pipeline — was also checked and is not a concern: it never passes
+through this service at all, since that pipeline stages over SSH directly, not through the watch
+directory. So narrowing to this list changes nothing about what actually ships.
+
+⚠️ **This list is not exhaustive of the watch tree, only of what has ever needed distributing.** As of
+this writing the watch tree also holds `.tga`, `.jpg` and `.sc` files that match no pattern here — none
+have ever been distributed and narrowing this list doesn't change that. Whether those are meant to ship
+is an operator call this list does not make; if a new asset type needs distributing, add its extension
+here rather than reaching for `*.*`.
 
 #### servers.json
 

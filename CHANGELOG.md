@@ -34,13 +34,24 @@ All notable changes to KTP File Distributor will be documented in this file.
   start, so a crash here would take the whole service down rather than fail to match one file later.
 
 ### Note
-- **This narrows what is distributed — verify against the LIVE `appsettings.json`'s own startup log
-  before deploying, not against this file.** `/opt/ktp-file-distributor/appsettings.json` lives off-repo
-  and has never actually enforced its configured list until this fix ships, so it may already carry (or
-  be missing) extensions this changelog doesn't know about. In particular: this service also distributes
-  the operator-staged `*.amxx.new` files used by the plugin/module `.new` → 03:00 swap pipeline, and
-  `*.amxx` does not match a `.new`-suffixed name. If `.new` isn't already in the live pattern list,
-  add it before this ships, or that deploy mechanism goes silently dark with no error anywhere.
+- **This narrows what is distributed, and the live evidence says the narrowing is exactly right.**
+  Measured on the data server's own `distributor-*.log` history (18,088 `Distribution` lines is the
+  control that the grep reads the logs at all): every extension ever actually distributed is `ini`
+  9,016 · `amxx` 60 · `txt` 14 · `cfg` 11 — all four already in this list. The only other things `*.*`
+  ever caught are exactly the junk it should never have caught: `bak-rot-20260806` (12), three `sed*`
+  editor temp files (11, across two directories), and `.ktp_ac_bans.ini.staging` (3). **The live
+  `appsettings.json`'s `WatchPatterns` is already this exact 11-entry list**, so after this fix the
+  effective set is unchanged from what has actually been shipping — this PR removes `*.*` and changes
+  nothing else about what is distributed.
+- `*.amxx.new` (the plugin/module `.new` → 03:00 swap pipeline) was checked and is not a concern here:
+  `.new` appears 0 times in the same log history, because that pipeline stages over SSH via
+  `stage-wave.py`, never through this service's watch directory.
+- 🔴 **A gap this list inherits rather than creates, worth recording rather than leaving as a surprise
+  for whoever finds it next:** the watch tree currently holds 203 `.tga`, 74 `.jpg` and 51 `.sc` files
+  that match no pattern, live or proposed, so none of them have ever been distributed and none will be
+  after this change either. `.tga` and `.sc` in particular look like real DoD client assets. Whether
+  they're meant to ship is an operator call, not something this PR decides — flagging it here so it's
+  a known gap rather than a rediscovery.
 
 ## [1.2.0] - 2026-09-11
 
