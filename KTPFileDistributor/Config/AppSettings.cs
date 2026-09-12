@@ -11,10 +11,13 @@ public class AppSettings
     public string WatchDirectory { get; set; } = "/srv/ktp/sync";
 
     /// <summary>
-    /// File patterns to watch (e.g., "*.amxx", "*.bsp", "*.cfg")
-    /// Empty = watch all files
+    /// File patterns to watch (e.g., "*.amxx", "*.bsp", "*.cfg"). Empty = watch all files.
+    /// Default MUST stay empty, not "*.*": configuration binding to a List&lt;T&gt; property
+    /// ADDS configured items onto whatever the default already holds rather than replacing
+    /// it, so a non-empty default here silently survives every configured value and every
+    /// deployment ends up watching every file regardless of WatchPatterns.
     /// </summary>
-    public List<string> WatchPatterns { get; set; } = new() { "*.*" };
+    public List<string> WatchPatterns { get; set; } = new();
 
     /// <summary>
     /// Debounce delay in milliseconds - wait this long after last change before distributing
