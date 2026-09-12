@@ -2,6 +2,57 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.2.1] - 2026-09-12
+
+### Fixed
+- **`WatchPatterns` never actually replaced the compiled-in default.** `AppSettings.WatchPatterns`
+  defaulted to `new() { "*.*" }`, and .NET's configuration binder *adds* configured list items onto
+  an existing `List<T>` default rather than replacing it. So a configured list of, say, 11 extensions
+  bound to 12 entries — the 11 configured plus the original `"*.*"` still sitting at index 0 — and the
+  service watched every single file in the tree regardless of what `appsettings.json` said. This has
+  been true since 1.0.0: the live service has logged `Patterns: *.*, *.amxx, ...` since at least
+  2026-07-31. It is how a `sed` backup and `sed`'s own temp file were both replicated to every fleet
+  server on 2026-08-06, and how a `.staging` ban-list file went out on 2026-08-09. The default is now
+  an empty list, which `PatternMatcher.MatchesWatchPatterns` already treats as "match everything" — an
+  unconfigured deployment behaves exactly as before, and a configured one now genuinely narrows.
+- The default `WatchPatterns` example in `appsettings.json`, `README.md` and `CLAUDE.md` was missing
+  `*.spr` and `*.ini`, both of which the fleet has been distributing in production (sprites reach
+  FastDL — see the `xrain2.spr`/`flare1.spr` note already in the README's FastDL section — and `.ini`
+  addon configs like `discord.ini`/`hltv_recorder.ini`/`plugins.ini` reach the game servers, which is
+  why the FastDL example already excludes it). Narrowing `WatchPatterns` down to the pre-1.2.1 example
+  list would have silently stopped distributing both. Added `*.spr` and `*.ini` and the corresponding
+  entry to "Supported File Types".
+- **Per-server `includePatterns`/`excludePatterns` (1.2.0) were invisible at startup.** The only signal
+  was target *names*; the per-file "skipped" line is Debug level, and a typo like `excludePattern`
+  (singular) deserializes to an empty list with no error from `System.Text.Json` — the filter fails
+  open, silently. Each enabled target's include/exclude lists are now logged at Information level at
+  startup, and a pattern in a shape the matcher can't honour (anything with a `*` other than `*.ext` or
+  the literal `*.*` — e.g. `maps/*`, `**/*.cfg`, `*.cfg*`) logs a startup warning, since each of those
+  falls through to the exact-path branch and matches nothing. Both the startup logging and the shape
+  check tolerate a `null` list and a `null` element inside one (either is possible from hand-edited JSON;
+  `ServerConfig.Accepts` already tolerated the same null-list case) — this runs unconditionally on every
+  start, so a crash here would take the whole service down rather than fail to match one file later.
+
+### Note
+- **This narrows what is distributed, and the live evidence says the narrowing is exactly right.**
+  Measured on the data server's own `distributor-*.log` history (18,088 `Distribution` lines is the
+  control that the grep reads the logs at all): every extension ever actually distributed is `ini`
+  9,016 · `amxx` 60 · `txt` 14 · `cfg` 11 — all four already in this list. The only other things `*.*`
+  ever caught are exactly the junk it should never have caught: `bak-rot-20260806` (12), three `sed*`
+  editor temp files (11, across two directories), and `.ktp_ac_bans.ini.staging` (3). **The live
+  `appsettings.json`'s `WatchPatterns` is already this exact 11-entry list**, so after this fix the
+  effective set is unchanged from what has actually been shipping — this PR removes `*.*` and changes
+  nothing else about what is distributed.
+- `*.amxx.new` (the plugin/module `.new` → 03:00 swap pipeline) was checked and is not a concern here:
+  `.new` appears 0 times in the same log history, because that pipeline stages over SSH via
+  `stage-wave.py`, never through this service's watch directory.
+- 🔴 **A gap this list inherits rather than creates, worth recording rather than leaving as a surprise
+  for whoever finds it next:** the watch tree currently holds 203 `.tga`, 74 `.jpg` and 51 `.sc` files
+  that match no pattern, live or proposed, so none of them have ever been distributed and none will be
+  after this change either. `.tga` and `.sc` in particular look like real DoD client assets. Whether
+  they're meant to ship is an operator call, not something this PR decides — flagging it here so it's
+  a known gap rather than a rediscovery.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added

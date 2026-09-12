@@ -40,9 +40,27 @@ public class FileWatcherWorker : BackgroundService
         _logger.LogInformation("KTP File Distributor starting...");
         _logger.LogInformation("Watch directory: {Directory}", _settings.WatchDirectory);
         _logger.LogInformation("Patterns: {Patterns}", string.Join(", ", _settings.WatchPatterns));
+        WarnOnUnsupportedPatterns("(global)", "WatchPatterns", _settings.WatchPatterns);
+
+        var enabledServers = _servers.Where(s => s.Enabled).ToList();
         _logger.LogInformation("Target servers: {Count} ({Servers})",
-            _servers.Count(s => s.Enabled),
-            string.Join(", ", _servers.Where(s => s.Enabled).Select(s => s.Name)));
+            enabledServers.Count, string.Join(", ", enabledServers.Select(s => s.Name)));
+
+        // Information, not Debug: previously the only signal a filter had even loaded was
+        // reading servers.json yourself, so a typo'd key failed open with no visible trace.
+        foreach (var server in enabledServers)
+        {
+            // Can be null (an explicit `"excludePatterns": null`), same as ServerConfig.Accepts
+            // already tolerates; PatternMatcher's helpers handle that the same way.
+            _logger.LogInformation(
+                "  {Server}: include=[{Include}] exclude=[{Exclude}]",
+                server.Name,
+                PatternMatcher.DescribeForLog(server.IncludePatterns, "(all)"),
+                PatternMatcher.DescribeForLog(server.ExcludePatterns, "(none)"));
+
+            WarnOnUnsupportedPatterns(server.Name, "includePatterns", server.IncludePatterns);
+            WarnOnUnsupportedPatterns(server.Name, "excludePatterns", server.ExcludePatterns);
+        }
 
         // Validate watch directory
         if (!Directory.Exists(_settings.WatchDirectory))
@@ -72,7 +90,7 @@ public class FileWatcherWorker : BackgroundService
         // Send startup notification
         await _discord.NotifyStartupAsync(
             _settings.WatchDirectory,
-            _servers.Count(s => s.Enabled),
+            enabledServers.Count,
             stoppingToken);
 
         _logger.LogInformation("File watcher started. Waiting for changes...");
@@ -232,6 +250,17 @@ public class FileWatcherWorker : BackgroundService
 
     private bool MatchesPattern(string fileName) =>
         PatternMatcher.MatchesWatchPatterns(fileName, _settings.WatchPatterns);
+
+    private void WarnOnUnsupportedPatterns(string server, string field, IEnumerable<string>? patterns)
+    {
+        foreach (var pattern in PatternMatcher.FindUnsupportedShapes(patterns))
+        {
+            _logger.LogWarning(
+                "{Server} {Field} contains {Pattern}, which this matcher treats as a literal " +
+                "relative path and will match nothing. Supported shapes: *.ext, *.*, or an exact relative path.",
+                server, field, pattern);
+        }
+    }
 
     private string GetRelativePath(string fullPath)
     {

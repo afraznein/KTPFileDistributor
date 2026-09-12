@@ -1,6 +1,6 @@
 # KTP File Distributor
 
-**Version 1.2.0** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
+**Version 1.2.1** - A .NET 8 Worker Service that monitors a directory for file changes and automatically distributes them to multiple game servers via SFTP.
 
 ## Features
 
@@ -23,7 +23,10 @@
 - `.wad` - Texture files
 - `.res` - Resource files
 - `.mdl` - Model files
+- `.spr` - Sprites
 - `.wav` - Sound files
+- `.ini` - Addon configs (`discord.ini`, `hltv_recorder.ini`, `plugins.ini`, ...); exclude
+  this from any web-served target — see the FastDL section below
 
 ## Requirements
 
@@ -61,7 +64,7 @@ sudo ./install.sh
 {
   "AppSettings": {
     "WatchDirectory": "/home/dod/distribute",
-    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.wav"],
+    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini"],
     "IncludeSubdirectories": true,
     "DebounceDelayMs": 5000,
     "MaxConcurrentUploads": 5,
@@ -82,9 +85,37 @@ sudo ./install.sh
 ```
 
 `WatchPatterns` is the global gate: a file whose extension isn't listed is dropped before
-it reaches the debouncer. An empty list, or the literal `"*.*"` (the compiled-in default),
-matches everything. Each server can then narrow what it receives with `includePatterns`
-and `excludePatterns` in `servers.json` (below).
+it reaches the debouncer. An empty list — the compiled-in default — or the literal `"*.*"`
+matches everything. **Configuring it in `appsettings.json` replaces the compiled-in default
+outright; it does not add to it.** (Before 1.2.1, the compiled-in default itself was
+`["*.*"]`, and .NET's configuration binder *adds* configured list items onto an existing
+default rather than replacing it — so any configured list silently grew a permanent, hidden
+`"*.*"` entry and every deployment watched every file regardless of what was written here.)
+Each server can then narrow what it receives with `includePatterns` and `excludePatterns` in
+`servers.json` (below).
+
+⚠️ That "replaces outright" guarantee is about the *default*, not about layering multiple
+configuration sources on top of each other. If a second source — an `appsettings.{Environment}.json`
+or an `AppSettings__WatchPatterns__N` environment variable — sets its own `WatchPatterns` entries,
+the same additive binder behavior applies *between* those sources: an override array shorter than
+the base one replaces matching indices but leaves the base's extra tail entries in place. This
+deployment only uses a single `appsettings.json`, so it doesn't hit that case today — but don't
+assume "replaces outright" survives adding a second source without checking the resulting list.
+
+**Measured against the fleet's actual distribution history, this list covers 100% of real traffic.**
+Every extension the live service has ever distributed, counted from `distributor-*.log`: `.ini` 9,016 ·
+`.amxx` 60 · `.txt` 14 · `.cfg` 11 — all four already in the list above. The only other things the old
+`"*.*"` catch-all ever picked up are exactly the junk it should never have: a `.bak-rot-*` backup, `sed`'s
+own editor temp files, and a `.staging` file (see the 1.2.1 CHANGELOG entry for counts). `*.amxx.new` —
+the plugin/module `.new` → 03:00 swap pipeline — was also checked and is not a concern: it never passes
+through this service at all, since that pipeline stages over SSH directly, not through the watch
+directory. So narrowing to this list changes nothing about what actually ships.
+
+⚠️ **This list is not exhaustive of the watch tree, only of what has ever needed distributing.** As of
+this writing the watch tree also holds `.tga`, `.jpg` and `.sc` files that match no pattern here — none
+have ever been distributed and narrowing this list doesn't change that. Whether those are meant to ship
+is an operator call this list does not make; if a new asset type needs distributing, add its extension
+here rather than reaching for `*.*`.
 
 #### servers.json
 
@@ -143,6 +174,14 @@ targets, which otherwise reads as a healthy startup.
 - There are no other wildcards. `maps/*` is a literal name and matches nothing.
 
 Filters apply to deletions as well. If you delete an excluded file from the watch tree, the copy on that server stays, because the server was never meant to have one. So when you add an exclude, remove any matching files the server already holds by hand, once.
+
+**Every enabled target's `include`/`exclude` lists are logged at startup, at Information
+level** — `journalctl -u ktp-file-distributor` right after a restart is the way to confirm a
+filter actually loaded, since a typo'd key (`excludePattern` instead of `excludePatterns`)
+deserializes to an empty list with no error from `System.Text.Json`, and previously nothing
+surfaced that. A pattern in a shape this matcher can't honour — anything with a `*` other than
+`*.ext` or the literal `*.*`, e.g. `maps/*`, `**/*.cfg`, `*cfg` — logs a startup warning, because
+each of those falls through to the exact-path branch and matches nothing, silently, forever.
 
 #### FastDL target — keep configs off it
 

@@ -32,6 +32,15 @@ files on 24 live instances, not just one.
   a tripwire fact when trimming.
 
 ## Known gaps — don't reintroduce these, don't copy the pattern elsewhere
+- ✅ **A non-empty `List<T>` default silently survived every configured value — FIXED in
+  1.2.1.** `AppSettings.WatchPatterns` defaulted to `new() { "*.*" }`; .NET's configuration
+  binder ADDS configured items onto an existing `List<T>` default rather than replacing it,
+  so `WatchPatterns` was never actually narrowable — every deployment watched every file in
+  the tree regardless of what was configured, which is how a `sed` backup and a `.staging`
+  file were both replicated fleet-wide. **Any `List<T>`-typed setting bound this way must
+  default to an empty list** (`PatternMatcher.MatchesWatchPatterns` already treats empty as
+  "match everything", so behaviour for an unconfigured deployment is unchanged); never give
+  it a non-empty compiled-in default and rely on configuration to override it.
 - ✅ **Renames leak remote copies — FIXED in 1.1.3** (FD-01). `OnFileRenamed`
   now emits a second `FileChangeEvent` for `GetRelativePath(e.OldFullPath)`
   with `ChangeType = Deleted` alongside the new-name event
