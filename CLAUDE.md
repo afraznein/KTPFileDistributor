@@ -46,7 +46,7 @@ sudo ./install.sh
 {
   "AppSettings": {
     "WatchDirectory": "/home/dod/distribute",
-    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini"],
+    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga"],
     "IncludeSubdirectories": true,
     "DebounceDelayMs": 5000,
     "MaxConcurrentUploads": 5

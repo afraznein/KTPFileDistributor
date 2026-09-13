@@ -2,6 +2,14 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **`*.tga` added to the default `WatchPatterns`,** matching the live data-server config since
+  2026-09-13. Maps list sky textures (`gfx/env/*.tga`) in their `.res` files as client downloads,
+  so without it a new map's skybox never reached the game servers or FastDL. `.jpg` and `.sc`
+  stay out: the tree's copies are the stock manual images and event scripts.
+
 ## [1.2.2] - 2026-09-12
 
 ### Fixed
