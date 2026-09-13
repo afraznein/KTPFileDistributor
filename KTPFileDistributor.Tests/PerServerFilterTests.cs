@@ -232,6 +232,7 @@ public class DistributeAsyncFilterTests
 
         var server = Assert.Single(result.ServerResults);
         Assert.True(server.Success, server.ErrorMessage);
+        Assert.True(server.Skipped);
     }
 
     [Fact]
@@ -243,5 +244,6 @@ public class DistributeAsyncFilterTests
 
         var server = Assert.Single(result.ServerResults);
         Assert.False(server.Success);
+        Assert.False(server.Skipped);
     }
 }
