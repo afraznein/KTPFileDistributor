@@ -63,12 +63,11 @@ public class WatchPatternConfigBindingTests
     [Fact]
     public void TheFleetsConfiguredListBindsExactlyAsWrittenNoAppendedCatchAll()
     {
-        // The list the live service has logged since at least 2026-07-31 (minus the "*.*"
-        // this fix removes) -- the production evidence for what must still work post-fix.
+        // The live service's configured list -- the production evidence for what must still bind.
         var fleetPatterns = new[]
         {
             "*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg",
-            "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini",
+            "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga",
         };
 
         var settings = BindAppSettings(WatchPatternEntries(fleetPatterns));
