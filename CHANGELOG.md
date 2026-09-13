@@ -17,7 +17,10 @@ All notable changes to KTP File Distributor will be documented in this file.
   than folding it into "successful" with no distinction. `AllSuccessful` still treats a
   skip as non-failing -- a batch whose only non-uploads are filtered-out skips is not a
   partial failure. `TotalBytesTransferred` now multiplies by servers that actually
-  uploaded, not by `SuccessCount` (which included skips and so overstated bytes moved).
+  uploaded, not by `SuccessCount` (which included skips and so overstated bytes moved) --
+  this closes the fully-skipped case only; a server whose filter drops just part of a
+  batch still bills for the whole batch's bytes, a separate pre-existing gap this does
+  not touch.
 
 ## [1.2.1] - 2026-09-12
 

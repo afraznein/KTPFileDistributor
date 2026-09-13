@@ -64,7 +64,10 @@ public class DistributionResult
     public bool AllSuccessful => ServerResults.All(r => r.Success);
 
     /// <summary>
-    /// Total bytes transferred (files * servers that actually uploaded -- a skip received nothing)
+    /// Total bytes transferred (whole-batch size * servers that actually uploaded). A fully-skipped
+    /// server no longer counts here, but a server whose filter drops only PART of the batch still
+    /// bills for the whole batch, not just the files it received -- a separate, pre-existing gap
+    /// this doesn't close.
     /// </summary>
     public long TotalBytesTransferred => Files.Sum(f => f.FileSize) * UploadedCount;
 
