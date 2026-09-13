@@ -87,7 +87,10 @@ public class SftpDistributorService
         if (files.Count == 0)
         {
             // Nothing to deliver, so don't connect: an unreachable host has nothing to fail.
+            // Skipped, not a real success -- a Discord embed distinguishes this from an
+            // actual 0.0s upload, which used to be indistinguishable.
             result.Success = true;
+            result.Skipped = true;
             _logger.LogDebug("No file in this batch applies to {Server}; skipped", server.Name);
             return result;
         }

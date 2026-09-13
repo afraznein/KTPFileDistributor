@@ -119,7 +119,7 @@ public class DiscordNotificationService
         return message.Length <= 90 ? message : message[..87] + "...";
     }
 
-    private object BuildResultEmbed(DistributionResult result)
+    internal object BuildResultEmbed(DistributionResult result)
     {
         var status = result.AllSuccessful ? "SUCCESS" : "PARTIAL FAILURE";
         var color = result.AllSuccessful ? 5763719 : 15548997; // Green or Red
@@ -131,9 +131,11 @@ public class DiscordNotificationService
             fileList = fileList[..997] + "...";
 
         var serverStatus = string.Join("\n", result.ServerResults.Select(s =>
-            s.Success
-                ? $"- {s.ServerName} ({s.Duration.TotalSeconds:F1}s)"
-                : $"- {s.ServerName} FAILED: {Summarize(s.ErrorMessage)}"));
+            s.Skipped
+                ? $"- {s.ServerName} skipped (filtered)"
+                : s.Success
+                    ? $"- {s.ServerName} ({s.Duration.TotalSeconds:F1}s)"
+                    : $"- {s.ServerName} FAILED: {Summarize(s.ErrorMessage)}"));
 
         // Truncation has to say what it dropped. One bad file mode fails identically
         // on all 25 targets, which is exactly when the operator needs to see how wide
@@ -154,7 +156,14 @@ public class DiscordNotificationService
             fields = new object[]
             {
                 new { name = "Files", value = fileList, inline = false },
-                new { name = "Servers", value = $"{result.SuccessCount}/{result.TotalServers} successful", inline = true },
+                new
+                {
+                    name = "Servers",
+                    value = result.SkippedCount > 0
+                        ? $"{result.SuccessCount}/{result.TotalServers} successful ({result.SkippedCount} skipped)"
+                        : $"{result.SuccessCount}/{result.TotalServers} successful",
+                    inline = true
+                },
                 new { name = "Duration", value = $"{result.TotalDuration.TotalSeconds:F1}s", inline = true },
                 new { name = "Data Transferred", value = FormatBytes(result.TotalBytesTransferred), inline = true },
                 new { name = "Server Details", value = serverStatus, inline = false }

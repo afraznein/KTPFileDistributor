@@ -2,6 +2,23 @@
 
 All notable changes to KTP File Distributor will be documented in this file.
 
+## [1.2.2] - 2026-09-12
+
+### Fixed
+- **A server a per-server filter excludes from a whole batch rendered as a real, instant
+  upload in Discord.** `UploadToServerAsync` returns early for that server without ever
+  connecting, and set only `Success = true` -- indistinguishable in the embed from an
+  upload that genuinely finished in `Duration = 0.0s`. With the FastDL entry's
+  `excludePatterns` on `*.cfg`/`*.ini`, every config-only push showed FastDL as a 0.0s
+  success. `ServerUploadResult` now carries a `Skipped` flag, set on that early return;
+  the embed renders a skipped server as `- {ServerName} skipped (filtered)` instead of a
+  duration, and the `Servers` field and `DistributionResult.GetSummary()` name the skip
+  count separately from the success count (e.g. `24/24 successful (1 skipped)`) rather
+  than folding it into "successful" with no distinction. `AllSuccessful` still treats a
+  skip as non-failing -- a batch whose only non-uploads are filtered-out skips is not a
+  partial failure. `TotalBytesTransferred` now multiplies by servers that actually
+  uploaded, not by `SuccessCount` (which included skips and so overstated bytes moved).
+
 ## [1.2.1] - 2026-09-12
 
 ### Fixed

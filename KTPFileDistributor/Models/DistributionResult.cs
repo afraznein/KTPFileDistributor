@@ -7,6 +7,9 @@ public class ServerUploadResult
 {
     public string ServerName { get; set; } = string.Empty;
     public bool Success { get; set; }
+
+    /// <summary>True when every file in the batch was filtered out for this server -- no connection was attempted, so Duration stays zero.</summary>
+    public bool Skipped { get; set; }
     public string? ErrorMessage { get; set; }
     public TimeSpan Duration { get; set; }
 }
@@ -41,23 +44,34 @@ public class DistributionResult
     public int FailureCount => ServerResults.Count(r => !r.Success);
 
     /// <summary>
+    /// Servers whose filter excluded every file in the batch -- never connected to, not a failure
+    /// </summary>
+    public int SkippedCount => ServerResults.Count(r => r.Skipped);
+
+    /// <summary>
+    /// Servers that actually received a file, as opposed to a filtered-out skip
+    /// </summary>
+    public int UploadedCount => ServerResults.Count(r => r.Success && !r.Skipped);
+
+    /// <summary>
     /// Total number of servers
     /// </summary>
     public int TotalServers => ServerResults.Count;
 
     /// <summary>
-    /// Whether all servers were updated successfully
+    /// Whether all servers were updated successfully (a skip counts as successful, not a failure)
     /// </summary>
     public bool AllSuccessful => ServerResults.All(r => r.Success);
 
     /// <summary>
-    /// Total bytes transferred (files * successful servers)
+    /// Total bytes transferred (files * servers that actually uploaded -- a skip received nothing)
     /// </summary>
-    public long TotalBytesTransferred => Files.Sum(f => f.FileSize) * SuccessCount;
+    public long TotalBytesTransferred => Files.Sum(f => f.FileSize) * UploadedCount;
 
     public string GetSummary()
     {
         var fileList = string.Join(", ", Files.Select(f => Path.GetFileName(f.RelativePath)));
-        return $"{Files.Count} file(s) [{fileList}] -> {SuccessCount}/{TotalServers} servers in {TotalDuration.TotalSeconds:F1}s";
+        var skipped = SkippedCount > 0 ? $", {SkippedCount} skipped" : "";
+        return $"{Files.Count} file(s) [{fileList}] -> {SuccessCount}/{TotalServers} servers{skipped} in {TotalDuration.TotalSeconds:F1}s";
     }
 }
