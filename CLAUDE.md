@@ -90,6 +90,11 @@ sudo ./install.sh
 > (HTTP and FTP). It also blocks deletes for those paths, so config files that reached
 > FastDL before the filter was added have to be removed by hand.
 
+> **Exclude patterns match a whole extension** — `*.cfg` matches a path ending in `.cfg` — so a backup
+> such as `dodserver.cfg.bak-<date>` is *not* excluded and reaches FastDL. Keep backups out of the watch
+> directory. A binary older than 1.2.0 ignores `excludePatterns` without complaint, so rolling back
+> below it reopens FastDL to configs even though `servers.json` still carries the key.
+
 > **`<DISTRIBUTOR_KEY_PATH>` is a placeholder** — the real path is whatever the live
 > `servers.json` on the data server says. It is deliberately not written here: this repo is
 > public, and the key must live **outside every web- or FTP-served directory** (docroots,
