@@ -6,6 +6,9 @@
 
 **REQUIRED: Before modifying, building, or deploying this service, invoke the `service-dev` skill** (`.claude/skills/service-dev/SKILL.md`). It carries the SFTP fan-out gaps you must not reintroduce, the FastDL path rule, and the build/deploy/verify checklist; do not edit the Services code without it loaded.
 
+**A design that ships as a document is NOT done** — every proposal in a docs-only PR becomes a
+tracked board item in the same act (operator ruling 2026-09-14). See `DESIGN_DOCS_ARE_NOT_DONE.md`.
+
 ## Overview
 .NET 8 Worker Service that monitors a directory for file changes and distributes them to multiple destinations via SFTP.
 
