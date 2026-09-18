@@ -101,12 +101,18 @@ do not retarget this one.
 
 The FastDL destination is a public document root, served over HTTP and FTP. With no
 filter, the watch tree fans out to every enabled entry, so a file placed in the tree
-for the game servers is published too. The gate is the FastDL entry's
-`"excludePatterns": ["*.cfg", "*.ini"]` (since 1.2.0). Before you assume configs are
-kept off, check that the live `servers.json` actually carries it. Any change to
-`PatternMatcher` or `ServerConfig.Accepts` changes what is published, so the filter
-tests must stay green. Keep secrets out of the tree regardless; a mitigation on the
-web server is a sweeper, not a gate.
+for the game servers is published too. The gate is the FastDL entry's per-server
+filter (since 1.2.0) — and it must be an **`includePatterns` allow-list**, not an
+`excludePatterns` deny-list. A deny-list gates only the extensions somebody already
+thought of, so the next `WatchPatterns` addition publishes itself: `*.tga` did exactly
+that on 2026-09-13. An allow-list stops a new extension at FastDL until a human adds it.
+The trade is that an asset type missing from the list silently never publishes, so
+re-check the list whenever `WatchPatterns` widens. `*.ztmp` belongs in it — compressed
+FastDL assets. Before you assume anything is kept off, read the live `servers.json` AND
+the startup log line for that target, which prints the filter that actually loaded. Any
+change to `PatternMatcher` or `ServerConfig.Accepts` changes what is published, so the
+filter tests must stay green. Keep secrets out of the tree regardless; a mitigation on
+the web server is a sweeper, not a gate.
 
 ## The service's account is not the tree's owner
 

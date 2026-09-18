@@ -25,7 +25,7 @@
     "username": "dod",
     "privateKeyPath": "/home/dod/.ssh/id_rsa",
     "remoteBasePath": "/var/www/fastdl/dod",
-    "excludePatterns": ["*.cfg", "*.ini"],
+    "includePatterns": ["*.bsp", "*.wad", "*.mdl", "*.spr", "*.wav", "*.tga", "*.bmp", "*.txt", "*.res", "*.ztmp"],
     "enabled": true
   }
 ]

@@ -193,6 +193,86 @@ public class FilesForServerTests
     }
 }
 
+/// <summary>
+/// The FastDL entry publishes to a public docroot, so its filter must name what MAY be
+/// published rather than what may not. A deny-list only gates the extensions somebody
+/// thought of, so the next WatchPatterns addition publishes itself -- which is what
+/// `*.tga` did on 2026-09-13.
+/// </summary>
+public class FastDlAllowListTests
+{
+    private static ServerConfig ShippedFastDlEntry()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "KTPFileDistributor", "servers.example.json")))
+            dir = dir.Parent;
+
+        // Not an Assert: a test that silently degrades to "found nothing, nothing to check"
+        // is the failure this class exists to catch.
+        if (dir is null)
+            throw new InvalidOperationException("KTPFileDistributor/servers.example.json not found above " + AppContext.BaseDirectory);
+
+        var servers = System.Text.Json.JsonSerializer.Deserialize<List<ServerConfig>>(
+            File.ReadAllText(Path.Combine(dir.FullName, "KTPFileDistributor", "servers.example.json")),
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+        return servers.Single(s => s.Name.Contains("FastDL", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ShippedFastDlEntryGatesByAllowListNotDenyList()
+    {
+        var fastdl = ShippedFastDlEntry();
+
+        Assert.NotEmpty(fastdl.IncludePatterns);
+        Assert.Empty(fastdl.ExcludePatterns);
+    }
+
+    [Theory]
+    // Client downloads -- the reason the target exists. One of these failing means the
+    // allow-list stopped publishing something, which is its one real cost.
+    [InlineData("maps/dod_anzio.bsp", true)]
+    [InlineData("dod_anzio.wad", true)]
+    [InlineData("models/player/gordon.mdl", true)]
+    [InlineData("sprites/flare1.spr", true)]
+    [InlineData("sound/ambience/rain.wav", true)]
+    [InlineData("gfx/env/dod_anziort.tga", true)]
+    [InlineData("overviews/dod_anzio.bmp", true)]
+    [InlineData("overviews/dod_anzio.txt", true)]
+    [InlineData("maps/dod_anzio.res", true)]
+    // Compressed FastDL assets. Clients fetch these, and dropping them from the list
+    // stops downloads with no error anywhere.
+    [InlineData("maps/dod_anzio.bsp.ztmp", true)]
+    // Server-side only. A dodserver.cfg can carry rcon_password.
+    [InlineData("dodserver.cfg", false)]
+    [InlineData("addons/ktpamx/configs/discord.ini", false)]
+    [InlineData("addons/ktpamx/plugins/ktp_match.amxx", false)]
+    [InlineData("addons/ktpamx/modules/dodx_amxx_i386.so", false)]
+    [InlineData("distributor.log", false)]
+    // A backup matches no whole extension, so the allow-list refuses it -- the opposite
+    // of what the deny-list did with the same path.
+    [InlineData("dodserver.cfg.bak-20260913", false)]
+    public void ShippedFastDlEntryPublishesAssetsAndNothingElse(string path, bool published) =>
+        Assert.Equal(published, ShippedFastDlEntry().Accepts(path));
+
+    [Fact]
+    public void AnExtensionNobodyHasListedIsNotPublished()
+    {
+        // The whole point of the conversion, stated without naming a real extension: a
+        // type added to WatchPatterns later reaches the game servers and stops here until
+        // somebody decides it may be published.
+        var fastdl = ShippedFastDlEntry();
+
+        Assert.False(fastdl.Accepts("maps/whatever.zzznew"));
+        // Control: the same entry still accepts something it does list, so the assertion
+        // above is about the filter and not about a broken path or an empty list.
+        Assert.True(fastdl.Accepts("maps/whatever.bsp"));
+        // Control: an unfiltered game-server target accepts both.
+        var game = new ServerConfig { Name = "game" };
+        Assert.True(game.Accepts("maps/whatever.zzznew"));
+    }
+}
+
 public class DistributeAsyncFilterTests
 {
     // Nothing listens on port 1, so any connection attempt fails fast. That turns

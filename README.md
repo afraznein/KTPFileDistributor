@@ -25,8 +25,8 @@
 - `.mdl` - Model files
 - `.spr` - Sprites
 - `.wav` - Sound files
-- `.ini` - Addon configs (`discord.ini`, `hltv_recorder.ini`, `plugins.ini`, ...); exclude
-  this from any web-served target — see the FastDL section below
+- `.ini` - Addon configs (`discord.ini`, `hltv_recorder.ini`, `plugins.ini`, ...); keep this
+  out of any web-served target's `includePatterns` — see the FastDL section below
 
 ## Requirements
 
@@ -183,14 +183,42 @@ surfaced that. A pattern in a shape this matcher can't honour — anything with 
 `*.ext` or the literal `*.*`, e.g. `maps/*`, `**/*.cfg`, `*cfg` — logs a startup warning, because
 each of those falls through to the exact-path branch and matches nothing, silently, forever.
 
-#### FastDL target — keep configs off it
+#### FastDL target — name what may be published, never what may not
 
-**Give the FastDL entry `"excludePatterns": ["*.cfg", "*.ini"]`.** The FastDL docroot is
-public: nginx serves it, and it is also the FTP root. Without a filter, every server
-config dropped into the watch tree is copied there, and a `dodserver.cfg` can carry
-`rcon_password`. Clients never download either extension; FastDL serves maps, textures,
-sprites, models, sounds and overviews. The game servers still get these files, because
-the exclude applies only to the entry that carries it.
+**Give the FastDL entry an `includePatterns` list, not an `excludePatterns` one.** The
+FastDL docroot is public: nginx serves it, and it is also the FTP root. Everything that
+reaches it is published, and a `dodserver.cfg` can carry `rcon_password`.
+
+```json
+"includePatterns": ["*.bsp", "*.wad", "*.mdl", "*.spr", "*.wav", "*.tga", "*.bmp", "*.txt", "*.res", "*.ztmp"]
+```
+
+A deny-list fails **open**: it gates the extensions somebody thought of on the day they
+wrote it, and every extension added to `WatchPatterns` afterwards is published the moment
+it lands, with no decision and no signal. That is not hypothetical — `*.tga` joined
+`WatchPatterns` on 2026-09-13 and reached the public docroot the same day because no
+exclude named it. It happened to be a legitimate client download (map skyboxes), which is
+exactly why nothing looked wrong.
+
+An allow-list fails **closed**: a new `WatchPatterns` extension reaches the game servers
+and stops at FastDL until someone adds it here, which makes publishing a decision instead
+of a side effect. The cost is that the list has to be maintained — an asset type missing
+from it silently never publishes, so check this list whenever you widen `WatchPatterns`.
+
+`*.ztmp` is in the list on purpose: those are compressed FastDL assets and clients fetch
+them. Dropping it from the list stops downloads without any error.
+
+The game servers still receive everything, because the filter applies only to the entry
+that carries it.
+
+⚠️ **Patterns match a whole extension**, so a backup such as `dodserver.cfg.bak-<date>`
+matches neither `*.cfg` nor anything in the list above. Under the allow-list that means it
+is *not published* — which is the right answer, and the opposite of what the old deny-list
+did with it. Keep backups out of the watch tree regardless.
+
+⚠️ **A binary older than 1.2.0 ignores both keys without complaint.** Rolling back below it
+publishes the entire watch tree to FastDL even though `servers.json` still carries the
+filter, and the startup log is the only place that shows it.
 
 #### FastDL target — the `dod/` path rule
 
