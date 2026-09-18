@@ -83,20 +83,27 @@ sudo ./install.sh
     "username": "root",
     "privateKeyPath": "<DISTRIBUTOR_KEY_PATH>",
     "remoteBasePath": "/var/www/fastdl/dod",
-    "excludePatterns": ["*.cfg", "*.ini"],
+    "includePatterns": ["*.bsp", "*.wad", "*.mdl", "*.spr", "*.wav", "*.tga", "*.bmp", "*.txt", "*.res", "*.ztmp"],
     "enabled": true
   }
 ]
 ```
 
-> **`excludePatterns` on the FastDL entry keeps server configs off the public docroot**
-> (HTTP and FTP). It also blocks deletes for those paths, so config files that reached
-> FastDL before the filter was added have to be removed by hand.
+> **The FastDL entry names what may be PUBLISHED, not what may not.** A deny-list gates only
+> the extensions somebody thought of, so the next `WatchPatterns` addition reaches the public
+> docroot the moment it lands — which is what happened to `*.tga` on 2026-09-13. An allow-list
+> stops a new extension at FastDL until someone adds it here. Filters also block deletes, so
+> anything that reached FastDL before a filter existed has to be removed by hand.
 
-> **Exclude patterns match a whole extension** — `*.cfg` matches a path ending in `.cfg` — so a backup
-> such as `dodserver.cfg.bak-<date>` is *not* excluded and reaches FastDL. Keep backups out of the watch
-> directory. A binary older than 1.2.0 ignores `excludePatterns` without complaint, so rolling back
-> below it reopens FastDL to configs even though `servers.json` still carries the key.
+> **The list has to be maintained, and that is the trade.** An asset type missing from it
+> silently never publishes — no error, clients just 404. Re-check it whenever `WatchPatterns`
+> widens. `*.ztmp` is in it deliberately: those are compressed FastDL assets clients fetch.
+
+> **Patterns match a whole extension**, so a backup such as `dodserver.cfg.bak-<date>` matches
+> nothing in the list and is therefore not published. Keep backups out of the watch directory
+> anyway. A binary older than 1.2.0 ignores both `includePatterns` and `excludePatterns` without
+> complaint, so rolling back below it publishes the whole watch tree even though `servers.json`
+> still carries the key — the startup log is the only place that shows which filter loaded.
 
 > **`<DISTRIBUTOR_KEY_PATH>` is a placeholder** — the real path is whatever the live
 > `servers.json` on the data server says. It is deliberately not written here: this repo is

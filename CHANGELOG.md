@@ -5,6 +5,26 @@ All notable changes to KTP File Distributor will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- **The FastDL target now names what may be published instead of what may not.** Its filter
+  becomes `"includePatterns": ["*.bsp", "*.wad", "*.mdl", "*.spr", "*.wav", "*.tga", "*.bmp",
+  "*.txt", "*.res", "*.ztmp"]` and drops `excludePatterns` entirely. A deny-list gates only the
+  extensions somebody had already thought of, so anything added to `WatchPatterns` afterwards
+  publishes itself to the public docroot the moment it lands — which is exactly what `*.tga` did
+  on 2026-09-13, unnoticed because it happened to be a legitimate client download. An allow-list
+  stops a new extension at FastDL until a human adds it. **Nothing about what is published
+  changes today:** the live deny-list is `*.cfg`, `*.ini`, `*.so`, `*.dll`, `*.dylib`, `*.log`,
+  `*.amxx`, `*.sma`, and of those only `*.cfg`, `*.ini` and `*.amxx` are in `WatchPatterns` at
+  all, so today's effective set is exactly the list above minus `*.ztmp` — which nothing watches
+  either. ⚠️ The cost runs the other way and is real: an asset type missing from the list
+  silently never publishes and clients just 404, so re-check the list whenever `WatchPatterns`
+  widens. `*.ztmp` is listed although nothing watches it, because those are compressed FastDL
+  assets and a later `WatchPatterns` addition must not be blocked by this list.
+  `servers.example.json`, `README.md`, `CLAUDE.md` and the `service-dev` skill updated together;
+  `PerServerFilterTests` now reads the shipped example and asserts the allow-list property
+  against it, including an invented extension that must not publish and two controls that must.
+  ⚠️ **Config only — the live `/opt/ktp-file-distributor/servers.json` is off-repo and still
+  carries the deny-list.** The service reads it at startup, so the change takes effect on the
+  next restart, not on merge.
 - **`*.tga` added to the default `WatchPatterns`,** matching the live data-server config since
   2026-09-13. Maps list sky textures (`gfx/env/*.tga`) in their `.res` files as client downloads,
   so without it a new map's skybox never reached the game servers or FastDL. `.jpg` and `.sc`
