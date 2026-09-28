@@ -183,6 +183,26 @@ surfaced that. A pattern in a shape this matcher can't honour — anything with 
 `*.ext` or the literal `*.*`, e.g. `maps/*`, `**/*.cfg`, `*cfg` — logs a startup warning, because
 each of those falls through to the exact-path branch and matches nothing, silently, forever.
 
+#### Per-instance files — exclude them on every game target
+
+A few paths under the watch tree hold a value that is **different on every instance**:
+`configs/servernamedefault.cfg` and `configs/servername.cfg` each carry that instance's
+`hostname`. The copy sitting in the watch tree is one instance's, so a single touch of it
+renames every other server, and the distribution reports success because nothing here knows
+the file is per-instance. The watch tree looks consistent while it is armed, since the source
+agrees with whichever instance it was taken from. `configs/servername.cfg` reached all 24
+fleet instances this way before anyone noticed.
+
+⚠️ **Order matters, because the exclude also gates deletions.** Add the exclude to every game
+target **first**, confirm it is loaded in the running service, and only then remove the source
+copy from the watch tree. Removing the source first deletes the file on every server.
+
+⛔ **And the exclude is not in effect because you wrote it to `servers.json`.** `Program.cs`
+reads that file once at startup and the bound list is a singleton, so an edit does nothing
+until the service restarts. The startup log lines above are the only proof a filter is live;
+an edit that has not been through a restart is inert, and removing the source in that state is
+the fleet-wide deletion this section exists to prevent.
+
 #### FastDL target — name what may be published, never what may not
 
 **Give the FastDL entry an `includePatterns` list, not an `excludePatterns` one.** The
