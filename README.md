@@ -193,6 +193,12 @@ the file is per-instance. The watch tree looks consistent while it is armed, sin
 agrees with whichever instance it was taken from. `configs/servername.cfg` reached all 24
 fleet instances this way before anyone noticed.
 
+⚠️ **Which of the two is loaded decides the blast radius, and it is not obvious from the
+names.** On this fleet `dodserver.cfg` execs `configs/servernamedefault.cfg`, and every exec of
+`configs/servername.cfg` is commented out — so flattening the first renames every server at the
+next `changelevel`, while flattening the second changes nothing a player can see. Check which
+file is actually exec'd before ranking an incident, and re-check it per deployment.
+
 ⚠️ **Order matters, because the exclude also gates deletions.** Add the exclude to every game
 target **first**, confirm it is loaded in the running service, and only then remove the source
 copy from the watch tree. Removing the source first deletes the file on every server.
@@ -202,6 +208,16 @@ reads that file once at startup and the bound list is a singleton, so an edit do
 until the service restarts. The startup log lines above are the only proof a filter is live;
 an edit that has not been through a restart is inert, and removing the source in that state is
 the fleet-wide deletion this section exists to prevent.
+
+🔑 **The startup banner is a claim; a probe carrying a control is the proof.** After the
+restart, change an excluded path and create a throwaway path that is *not* excluded. The
+excluded file must not move and the control must reach every target — without the control,
+"nothing moved" and "the watcher is dead" are the same observation.
+
+➡️ **Remove the sources one at a time, least valuable first.** The delete path and the upload
+path share `FilesForServer`, so removing the source of a file nothing loads tests the filter
+where a wrong answer costs nothing. Verify the fleet, then remove the one the servers actually
+exec. Done in that order, the file that matters still has a source if the filter does not hold.
 
 #### FastDL target — name what may be published, never what may not
 
