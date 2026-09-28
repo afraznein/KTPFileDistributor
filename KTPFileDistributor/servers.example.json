@@ -6,6 +6,7 @@
     "username": "dod",
     "password": "your-password-here",
     "remoteBasePath": "/home/dod/server/dod",
+    "excludePatterns": ["configs/servernamedefault.cfg", "configs/servername.cfg"],
     "enabled": true
   },
   {
@@ -16,6 +17,7 @@
     "privateKeyPath": "/home/dod/.ssh/id_rsa",
     "privateKeyPassphrase": "",
     "remoteBasePath": "/srv/dod",
+    "excludePatterns": ["configs/servernamedefault.cfg", "configs/servername.cfg"],
     "enabled": true
   },
   {
