@@ -49,7 +49,7 @@ sudo ./install.sh
 {
   "AppSettings": {
     "WatchDirectory": "/home/dod/distribute",
-    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga"],
+    "WatchPatterns": ["*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga"],
     "IncludeSubdirectories": true,
     "DebounceDelayMs": 5000,
     "MaxConcurrentUploads": 5
@@ -63,6 +63,16 @@ sudo ./install.sh
   }
 }
 ```
+
+⚠️ **The live list has no `*.amxx`** (re-measured 2026-10-01). Plugins in `addons/ktpamx/plugins/` are therefore NOT
+pushed today, even though the operator ruled 2026-09-28 that they should be; re-arming it is its own deploy.
+⚠️ `WatchPatterns` is in `appsettings.json`, not `servers.json`, and the live file also holds the relay
+auth secret in cleartext — never paste it anywhere public.
+
+➡️ **Pushing many files through the watched tree, the method that keeps it safe:**
+① prove the fleet is uniform on each file first — if hosts disagree, copying one host's copy is itself a deploy;
+② push one low-blast file, wait out the ~15 s debounce and push, re-sweep all instances and prove it was a no-op
+before touching the rest; ③ compare hashes at every hop (pulled vs live, staged vs live, written vs staged).
 
 ### /opt/ktp-file-distributor/servers.json
 ```json
