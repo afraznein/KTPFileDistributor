@@ -64,8 +64,9 @@ sudo ./install.sh
 }
 ```
 
-⚠️ **The live list has no `*.amxx`** (re-measured 2026-10-01). Plugins in `addons/ktpamx/plugins/` are therefore NOT
-pushed today, even though the operator ruled 2026-09-28 that they should be; re-arming it is its own deploy.
+⚠️ **Neither the live list nor the tracked one has `*.amxx`** (operator ruling 2026-10-03: plugins ship through `stage-wave.py`,
+not the distributor). A fresh install must not re-arm a second, unledgered plugin path that bypasses the `.new` swap and md5 pins;
+`TrackedConfigTests` fails if a plugin or module extension returns.
 ⚠️ `WatchPatterns` is in `appsettings.json`, not `servers.json`, and the live file also holds the relay
 auth secret in cleartext — never paste it anywhere public.
 

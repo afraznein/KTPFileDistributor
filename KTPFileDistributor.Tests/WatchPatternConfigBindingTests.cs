@@ -66,7 +66,7 @@ public class WatchPatternConfigBindingTests
         // The live service's configured list -- the production evidence for what must still bind.
         var fleetPatterns = new[]
         {
-            "*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg",
+            "*.bsp", "*.txt", "*.bmp", "*.cfg",
             "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga",
         };
 

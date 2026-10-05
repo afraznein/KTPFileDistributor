@@ -15,7 +15,8 @@
 
 ## Supported File Types
 
-- `.amxx` - AMX Mod X plugins
+Plugins (`.amxx`) and modules (`.so`) are deliberately not watched: they ship through `stage-wave.py`, not the distributor.
+
 - `.bsp` - Map files
 - `.txt` - Text/configuration files
 - `.bmp` - Spray images
@@ -64,7 +65,7 @@ sudo ./install.sh
 {
   "AppSettings": {
     "WatchDirectory": "/home/dod/distribute",
-    "WatchPatterns": ["*.amxx", "*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga"],
+    "WatchPatterns": ["*.bsp", "*.txt", "*.bmp", "*.cfg", "*.wad", "*.res", "*.mdl", "*.spr", "*.wav", "*.ini", "*.tga"],
     "IncludeSubdirectories": true,
     "DebounceDelayMs": 5000,
     "MaxConcurrentUploads": 5,
