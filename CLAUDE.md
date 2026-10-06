@@ -117,6 +117,11 @@ before touching the rest; ③ compare hashes at every hop (pulled vs live, stage
 ]
 ```
 
+> **The FastDL docroot is an ENTRY in this file, so the fan-out count is one more than the
+> fleet.** A Discord result or log line naming one target per game instance plus one is correct
+> and not drift — count the enabled entries here, never infer the expected number from the
+> instance count.
+
 > **The FastDL entry names what may be PUBLISHED, not what may not.** A deny-list gates only
 > the extensions somebody thought of, so the next `WatchPatterns` addition reaches the public
 > docroot the moment it lands — which is what happened to `*.tga` on 2026-09-13. An allow-list
@@ -126,6 +131,11 @@ before touching the rest; ③ compare hashes at every hop (pulled vs live, stage
 > **The list has to be maintained, and that is the trade.** An asset type missing from it
 > silently never publishes — no error, clients just 404. Re-check it whenever `WatchPatterns`
 > widens. `*.ztmp` is in it deliberately: those are compressed FastDL assets clients fetch.
+
+> **It is also what keeps a config out of the public docroot.** `*.ini` and `*.cfg` are in
+> `WatchPatterns` and absent from the list above, so the allow-list is the only thing holding
+> them back — not a property of config files, and not luck. Adding either here starts
+> publishing fleet config to anyone who can fetch it.
 
 > **Patterns match a whole extension**, so a backup such as `dodserver.cfg.bak-<date>` matches
 > nothing in the list and is therefore not published. Keep backups out of the watch directory
