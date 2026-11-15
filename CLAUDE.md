@@ -89,7 +89,7 @@ auth secret in cleartext — never paste it anywhere public.
 
 ➡️ **Pushing many files through the watched tree, the method that keeps it safe:**
 ① prove the fleet is uniform on each file first — if hosts disagree, copying one host's copy is itself a deploy;
-② push one low-blast file, wait out the ~15 s debounce and push, re-sweep all instances and prove it was a no-op
+② push one low-blast file, wait out the 5 s debounce and the ~20 s fan-out (poll until every instance agrees), re-sweep all instances and prove it was a no-op
 before touching the rest; ③ compare hashes at every hop (pulled vs live, staged vs live, written vs staged).
 
 ### /opt/ktp-file-distributor/servers.json
