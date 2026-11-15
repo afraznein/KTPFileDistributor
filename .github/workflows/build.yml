@@ -1,7 +1,7 @@
 # KTP Tier 1 — compile gate for the file distributor.
 #
 # This service watches /home/dod/distribute on the data server and pushes any
-# created or changed file to all 24 fleet instances within ~15s. It had no CI
+# created or changed file to all 24 fleet instances within a minute. It had no CI
 # at all, so a change that does not compile would have been found by deploying
 # it. Built on ubuntu-latest because that is where it actually runs.
 #
